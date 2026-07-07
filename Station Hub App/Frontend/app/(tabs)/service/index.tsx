@@ -11,11 +11,13 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
+import { useUser } from "../../../context/userContext";
 
 type TabType = "basic" | "premium" | "addons";
 
 export default function ServicesScreen() {
   const router = useRouter();
+  const { user } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>("premium");
 
   const tabData = {
@@ -36,15 +38,11 @@ export default function ServicesScreen() {
 >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#000" />
-          </TouchableOpacity>
-
           <Text style={styles.headerTitle}>Services</Text>
 
           <Image
-            source={require("../../../assets/images/johndoe.png")}
-            style={styles.profileImg}
+            source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")}
+            style={{ width: 40, height: 40, borderRadius: 20 }}
           />
         </View>
 

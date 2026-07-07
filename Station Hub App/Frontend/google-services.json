@@ -1,41 +1,41 @@
 {
   "project_info": {
-    "project_number": "522728415702",
-    "project_id": "stationhubproject",
-    "storage_bucket": "stationhubproject.firebasestorage.app"
+    "project_number": "969978945255",
+    "project_id": "stationhub-mycopy",
+    "storage_bucket": "stationhub-mycopy.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:522728415702:android:0794aaf05b27d2d83d0477",
+        "mobilesdk_app_id": "1:969978945255:android:b8544207c63cfe44934c42",
         "android_client_info": {
           "package_name": "com.laibafaryal.stationhubapp"
         }
       },
       "oauth_client": [
         {
-          "client_id": "522728415702-9nqiiqqnbpjebkh16pvt2jrdfejhelrv.apps.googleusercontent.com",
+          "client_id": "969978945255-r3p5fueh9c1rle7pd77ngrk1m1fshm4i.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.laibafaryal.stationhubapp",
-            "certificate_hash": "ce1e93f67fc0d4848e5dffb05d38673ab22164a6"
+            "certificate_hash": "6a2a292476ec51f60abafd0dccd0b93f7079876d"
           }
         },
         {
-          "client_id": "522728415702-6voc58ghabeu612k3ru6hg26564qn2s3.apps.googleusercontent.com",
+          "client_id": "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyANq0thvqTd459DMkQWCNoBF30-PUf7A6k"
+          "current_key": "AIzaSyB2Z3ui5YOQpNGzpZYoWXqI-oNvkLfBTXk"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "522728415702-6voc58ghabeu612k3ru6hg26564qn2s3.apps.googleusercontent.com",
+              "client_id": "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

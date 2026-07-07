@@ -3,7 +3,6 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -11,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -166,7 +166,7 @@ export default function ManageProfileScreen() {
       >
         {/* HEADER */}
         <View style={styles.header} >
-          <TouchableOpacity onPress={() => router.push("/profile/Index")} >
+          <TouchableOpacity onPress={() => router.push("/profile")} >
             <Ionicons
               name="arrow-back"
               size={24}

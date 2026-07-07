@@ -4,13 +4,13 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   Image,
   ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { useUser } from "../../../context/userContext";
 
 type Station = {
   id: string;
@@ -32,6 +33,7 @@ type Station = {
 
 export default function BookingScreen() {
   const router = useRouter();
+  const { user } = useUser();
 
   const params = useLocalSearchParams<{
     service_id?: string;
@@ -314,6 +316,10 @@ export default function BookingScreen() {
             {/* HEADER */}
             <View style={styles.header}>
               <Text style={styles.headerTitle}>Book Your Wash</Text>
+              <Image
+                source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")}
+                style={{ width: 40, height: 40, borderRadius: 20 }}
+              />
             </View>
 
             {/* SERVICE CARD */}
@@ -665,14 +671,11 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    // flexDirection: "row",
-    // justifyContent: "space-between",
-    // padding: 18,
-    // marginTop: 40,
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     marginVertical: 28,
+    paddingHorizontal: 18,
   },
 
   headerTitle: { fontSize: 22, fontWeight: "700", color: "#000" },

@@ -322,9 +322,13 @@ export default function ServicesScreen() {
         }}
       >
         {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Services</Text>
-        </View>
+<View style={styles.header}>
+  <TouchableOpacity onPress={() => router.back()}>
+    <Ionicons name="arrow-back" size={22} color="#000" />
+  </TouchableOpacity>
+  <Text style={styles.headerTitle}>Services</Text>
+  <View style={{ width: 24 }} />
+</View>
 
         {/* TABS */}
         <View style={styles.tabContainer}>
@@ -495,7 +499,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     marginVertical: 28,
   },

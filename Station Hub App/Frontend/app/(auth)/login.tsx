@@ -72,15 +72,16 @@ const showError = (message: string) => {
     }
   };
 
-  const redirectUri = AuthSession.makeRedirectUri({
-    scheme: "stationhubapp",
-  });
+ const redirectUri = AuthSession.makeRedirectUri({
+  scheme: "stationhubapp",
+  useProxy: true,
+} as any);
 
   console.log("Google redirect URI:", redirectUri);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: "971946675746-ur3nn6fo2tng6n9hqpervji0c31baf83.apps.googleusercontent.com",
-    scopes: ["profile", "email"],
+   androidClientId: "969978945255-r3p5fueh9c1rle7pd77ngrk1m1fshm4i.apps.googleusercontent.com",
+webClientId: "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleusercontent.com", scopes: ["profile", "email"],
     redirectUri,
   });
 

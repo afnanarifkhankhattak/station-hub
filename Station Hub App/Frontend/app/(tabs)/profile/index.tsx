@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   ScrollView,
   TouchableOpacity,
   Image,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Ionicons,
@@ -16,7 +16,7 @@ import {
 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
-import { useUser } from '../../../context/userContext';
+import { useUser } from "../../../context/userContext";
 
 
 export default function ProfileSettingsScreen() {
@@ -118,27 +118,19 @@ export default function ProfileSettingsScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          {/* <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons
-              name="arrow-back"
-              size={24}
-              color="#1A1A1A"
-            />
-          </TouchableOpacity> */}
+          <Text style={styles.headerTitle}>Profile</Text>
 
-          {/* <Text style={styles.headerTitle}>
-            Profile Settings
-          </Text> */}
-
-          <View style={{ width: 24 }} />
+          <Image
+            source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")}
+            style={{ width: 40, height: 40, borderRadius: 20 }}
+          />
         </View>
 
         {/* PROFILE CARD */}
         <TouchableOpacity style={styles.profileCard}>
           <View style={styles.profileLeft}>
             <Image
-              source={{ uri: user?.profile_image }}
-              style={styles.avatar}
+source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")}              style={styles.avatar}
             />
 
             <View>
@@ -200,9 +192,10 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     marginVertical: 20,
+    paddingHorizontal: 18,
   },
 
   headerTitle: {

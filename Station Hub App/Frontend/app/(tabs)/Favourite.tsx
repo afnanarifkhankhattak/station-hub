@@ -1,15 +1,16 @@
 
+import { useUser } from "../../context/userContext";
 import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
-  SafeAreaView,
   ScrollView,
   Image,
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, FontAwesome } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -32,6 +33,7 @@ type Service = {
 
 export default function Favorites() {
   const router = useRouter();
+  const { user } = useUser();
   const [services, setServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -124,9 +126,17 @@ export default function Favorites() {
     >
       <SafeAreaView style={{ flex: 1 }}>
         {/* HEADER */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Favorites</Text>
-        </View>
+<View style={styles.header}>
+  <Text style={styles.title}>Favorites</Text>
+  <Image
+    source={
+      user?.profile_image
+        ? { uri: user.profile_image }
+        : require("../../assets/images/johndoe.png")
+    }
+    style={{ width: 40, height: 40, borderRadius: 20 }}
+  />
+</View>
 
         {/* SORT + FILTER */}
         <View style={styles.filterContainer}>
@@ -235,7 +245,7 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
     marginVertical: 28,
   },

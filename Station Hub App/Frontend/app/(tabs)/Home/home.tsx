@@ -5,10 +5,10 @@ import {
   StyleSheet,
   ScrollView,
   Image,
-  SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
@@ -112,8 +112,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={styles.userSection}>
             <Image
-              source={{ uri: user?.profile_image }}
-              style={styles.profile}
+source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")}              style={styles.profile}
             />
 
             <View>
@@ -240,8 +239,7 @@ export default function HomeScreen() {
               >
                 {station.image_url ? (
                   <Image
-                    source={{ uri: station.image_url }}
-                    style={styles.serviceImage}
+source={station.image_url ? { uri: station.image_url } : require("../../../assets/images/riverside.png")}                    style={styles.serviceImage}
                   />
                 ) : (
                   <Image

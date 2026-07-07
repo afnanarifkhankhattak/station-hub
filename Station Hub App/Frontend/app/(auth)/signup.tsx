@@ -15,7 +15,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_BASE = "http://192.168.18.87:8000";
+const API_BASE = "http://192.168.18.122:8000";
 
 export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);

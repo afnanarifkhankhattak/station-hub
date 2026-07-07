@@ -14,7 +14,7 @@ export default function BottomNav() {
     { label: "Booking", icon: "calendar", key: "Booking", route: "/Booking/booking" },
     { label: "Favorite", icon: "heart", key: "Favourite", route: "/Favourite" },
     { label: "Services", icon: "construct", key: "service", route: "/service/index" },
-    { label: "Profile", icon: "person", key: "profile", route: "/profile/Index" },
+    { label: "Profile", icon: "person", key: "profile", route: "/profile" },
   ];
 
   return (

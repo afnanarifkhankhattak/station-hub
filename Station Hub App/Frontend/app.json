@@ -23,7 +23,8 @@
       "googleMapsApiKey": ""
     },
     "web": {
-      "output": "static",
+      "bundler": "metro",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -56,9 +57,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "522bedc3-8641-4434-8e7f-2e0551bb2a4d"
+        "projectId": "73c20e26-ff7a-490b-8d14-7b7c15b29e9e"
       }
     },
-    "owner": "sadeed7"
+    "owner": "babarnaseer"
   }
 }
