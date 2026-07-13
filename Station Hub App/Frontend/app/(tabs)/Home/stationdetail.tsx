@@ -295,17 +295,18 @@ export default function StationDetail() {
               />
             </View>
           </View>
+          {/* SCHEDULE BUTTON — cutout effect */}
+          {services.length > 0 && (
+            <View style={styles.scheduleWrapper}>
+              <TouchableOpacity
+                style={styles.scheduleBtn}
+                onPress={() => handleScheduleService(services[0])}
+              >
+                <Text style={styles.buttonText}>Schedule</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-
-        {/* SCHEDULE BUTTON — only way to reach Booking from this screen */}
-        {services.length > 0 && (
-          <TouchableOpacity
-            style={styles.scheduleBtn}
-            onPress={() => handleScheduleService(services[0])}
-          >
-            <Text style={styles.buttonText}>Schedule</Text>
-          </TouchableOpacity>
-        )}
 
         {/* RATING SECTION */}
         <View style={styles.ratingCard}>
@@ -451,7 +452,7 @@ const styles = StyleSheet.create({
     color: "gray",
   },
 
-aboutCard: {
+  aboutCard: {
     backgroundColor: "#1B2A41",
     marginHorizontal: 24,
     marginTop: 16,
@@ -529,16 +530,23 @@ aboutCard: {
     resizeMode: "cover",
   },
 
-scheduleBtn: {
-    backgroundColor: "#F97316",
-    marginLeft: 24,
-    marginTop: 10,
-    marginBottom: 16,
-    paddingVertical: 12,
-    paddingHorizontal: 32,
-    borderRadius: 25,
+  scheduleWrapper: {
+    position: "absolute",
+    bottom: -1,
+    left: -1,
+    backgroundColor: "#FDE9E6",
+    borderTopRightRadius: 32,
+    borderBottomLeftRadius: 16,
+    paddingTop: 12,
+    paddingRight: 12,
+  },
+  scheduleBtn: {
+    backgroundColor: "#F97316", // slightly lighter orange
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    borderRadius: 24,
     alignItems: "center",
-    alignSelf: "flex-start",
+    justifyContent: "center",
   },
 
   centered: {
@@ -552,8 +560,9 @@ scheduleBtn: {
   },
 
   buttonText: {
-    color: "#fff",
+    color: "#1a1a1a",
     fontWeight: "bold",
+    fontSize: 16,
   },
 
   offeredHeading: {

@@ -657,7 +657,6 @@ export default function BookingScreen() {
                         styles.serviceCardText,
                         isActive && { color: "#fff" },
                       ]}
-                      numberOfLines={1}
                     >
                       {service.name}
                     </Text>
