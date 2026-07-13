@@ -10,12 +10,12 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
-const API_BASE = "http://192.168.18.122:8000";
+import { API_BASE } from "../../src/config";
 
 export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
@@ -78,19 +78,21 @@ const showError = (message: string) => {
         showError(data.detail || "Signup failed");
       }
     } catch (error) {
-      showError("Cannot connect to server");
+      console.log("LOGIN ERROR DETAILS:", error);
+      // showError("Cannot connect to server");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <LinearGradient
-      colors={["#ffd7bd", "#fff7f2", "#ffffff", "#fff7f2", "#ffd7bd"]}
-      locations={[0, 0.3, 0.5, 0.7, 1]}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.content}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <LinearGradient
+        colors={["#ffd7bd", "#fff7f2", "#ffffff", "#fff7f2", "#ffd7bd"]}
+        locations={[0, 0.3, 0.5, 0.7, 1]}
+        style={styles.container}
+      >
+        <ScrollView contentContainerStyle={styles.content}>
 
         {/* LOGO */}
         <Image
@@ -210,18 +212,19 @@ const showError = (message: string) => {
           <Text style={styles.link}>Privacy Policy</Text>
         </Text>
 
-      </ScrollView>
+        </ScrollView>
 
-      {/* TOAST */}
-      {toast.visible && (
-  <View style={[styles.toast, { backgroundColor: toast.type === "error" ? "#e74c3c" : "#ff8a00" }]}>
-    <Text style={styles.toastText}>
-      {toast.type === "error" ? "✕ " : "✓ "}{toast.message}
-    </Text>
-  </View>
-)}
+        {/* TOAST */}
+        {toast.visible && (
+          <View style={[styles.toast, { backgroundColor: toast.type === "error" ? "#e74c3c" : "#ff8a00" }]}>
+            <Text style={styles.toastText}>
+              {toast.type === "error" ? "✕ " : "✓ "}{toast.message}
+            </Text>
+          </View>
+        )}
 
-    </LinearGradient>
+      </LinearGradient>
+    </SafeAreaView>
   );
 }
 

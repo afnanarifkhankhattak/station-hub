@@ -9,9 +9,9 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
-
-const API_BASE = "http://192.168.18.87:8000";
+import { API_BASE } from "../../src/config";
 
 export default function VerifyOTP() {
   const router = useRouter();
@@ -80,7 +80,8 @@ export default function VerifyOTP() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
 
       <View style={styles.logoBox}>
         <Image
@@ -148,7 +149,8 @@ export default function VerifyOTP() {
         </View>
       )}
 
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

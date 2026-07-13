@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as WebBrowser from "expo-web-browser";
@@ -19,8 +20,6 @@ import * as AuthSession from "expo-auth-session";
 import { API_BASE } from "../../src/config";
 
 WebBrowser.maybeCompleteAuthSession();
-
-// const API_BASE = "http://192.168.1.10:8000";
 
 export default function Login() {
   const router = useRouter();
@@ -66,7 +65,8 @@ const showError = (message: string) => {
         showError(data.detail || "Login failed");
       }
     } catch (error) {
-      showError("Cannot connect to server");
+      console.log("LOGIN ERROR DETAILS:", error);
+      // showError("Cannot connect to server");
     } finally {
       setLoading(false);
     }
@@ -92,10 +92,11 @@ webClientId: "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleuserconte
   }, [response]);
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
+    <SafeAreaView style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.container}
+      >
       <View style={styles.card}>
 
         {/* LOGO */}
@@ -189,7 +190,8 @@ webClientId: "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleuserconte
       </View>
     )}
 
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

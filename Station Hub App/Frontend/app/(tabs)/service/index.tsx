@@ -8,6 +8,7 @@ import {
   ScrollView,
   StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
@@ -29,15 +30,19 @@ export default function ServicesScreen() {
   const services = [1, 2, 3, 4,5];
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF4EC" }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF4EC" />
 
       <ScrollView
-  showsVerticalScrollIndicator={false}
-  contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16, paddingTop: 40 }}
->
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 16, paddingTop: 16 }}
+      >
         {/* HEADER */}
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={22} color="#000" />
+          </TouchableOpacity>
+
           <Text style={styles.headerTitle}>Services</Text>
 
           <Image
@@ -126,7 +131,7 @@ export default function ServicesScreen() {
       </ScrollView>
 
       <Bottomnav />
-    </View>
+    </SafeAreaView>
   );
 }
 

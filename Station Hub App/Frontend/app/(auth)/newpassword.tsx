@@ -8,10 +8,10 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-
-const API_BASE = "http://192.168.18.87:8000";
+import { API_BASE } from "../../src/config";
 
 export default function CreatePassword() {
   const router = useRouter();
@@ -64,7 +64,8 @@ export default function CreatePassword() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
 
       <Text style={styles.heading}>Create New Password</Text>
       <Text style={styles.subText}>
@@ -134,7 +135,8 @@ export default function CreatePassword() {
         </View>
       )}
 
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

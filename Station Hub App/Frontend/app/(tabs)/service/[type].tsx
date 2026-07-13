@@ -10,13 +10,12 @@ import {
   ActivityIndicator,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
-
-// const API_BASE = "http://192.168.18.95:8000";
 
 type Tier = { price: number; duration: string };
 type Service = {
@@ -309,7 +308,7 @@ export default function ServicesScreen() {
   }, [loading, highlightId, filteredServices]);
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF4EC" }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF4EC" />
 
       <ScrollView
@@ -485,9 +484,8 @@ export default function ServicesScreen() {
           <Text style={styles.toastText}>{toast.message}</Text>
         </View>
       )}
-
       <Bottomnav />
-    </View>
+    </SafeAreaView>
   );
 }
 

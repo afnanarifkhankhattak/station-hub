@@ -1,20 +1,23 @@
 import React from "react";
 import { View, Text, ImageBackground, Image, TouchableOpacity, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 
 export default function LandingPage() {
   const router = useRouter();
 
   return (
-    <ImageBackground
-  source={require("../../assets/images/signup.png")}
-  style={styles.background}
->
-      {/* Dark overlay for better text visibility */}
-      <View style={styles.overlay} />
+    <SafeAreaView style={{ flex: 1 }}>
+      <ImageBackground
+        source={require("../../assets/images/signup.png")}
+        style={styles.background}
+      >
 
-      {/* Content */}
-      <View style={styles.container}>
+        {/* Dark overlay for better text visibility */}
+        <View style={styles.overlay} />
+
+        {/* Content */}
+        <View style={styles.container}>
 
         {/* Logo */}
        <Image
@@ -43,7 +46,9 @@ export default function LandingPage() {
 </Text>
 
       </View>
-    </ImageBackground>
+        
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
 

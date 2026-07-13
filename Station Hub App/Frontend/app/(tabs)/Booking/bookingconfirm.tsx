@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
@@ -91,10 +92,11 @@ export default function BookingConfirmedScreen() {
   }, [params.booking_id]);
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={{ paddingBottom: 100 }}
-    >
+    <SafeAreaView style={{ flex: 1, backgroundColor: styles.container.backgroundColor }}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={{ paddingBottom: 100 }}
+      >
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()}>
@@ -188,7 +190,9 @@ export default function BookingConfirmedScreen() {
       >
         <Text style={{ color: "#fff", fontWeight: "700" }}>Back To Home</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
+    
   );
 }
 

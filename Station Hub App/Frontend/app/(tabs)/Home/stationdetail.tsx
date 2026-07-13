@@ -10,8 +10,9 @@ import {
   Dimensions,
   ActivityIndicator,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { decode } from "base-64";   // ← add this line
+import { decode } from "base-64";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
@@ -20,8 +21,31 @@ import { API_BASE } from "../../../src/config"; // adjust relative path as neede
 
 const { width } = Dimensions.get("window");
 
+// Maps service name keywords to an icon — falls back to a generic icon
+const getServiceIcon = (name: string): any => {
+  const n = name.toLowerCase();
+  if (n.includes("express") || n.includes("wash")) return "car-outline";
+  if (n.includes("premium") || n.includes("detail")) return "ribbon-outline";
+  if (n.includes("interior")) return "color-fill-outline";
+  if (n.includes("engine")) return "cog-outline";
+  if (n.includes("wax")) return "shield-checkmark-outline";
+  if (n.includes("tyre") || n.includes("tire")) return "ellipse-outline";
+  if (n.includes("maintain") || n.includes("maintenance")) return "construct-outline";
+  return "sparkles-outline";
+};
+
+// Pulls a single flat price/duration out of a service, regardless of
+// whether the backend still stores it under tiers.base / tiers.premium.
+const getServicePricing = (service: any): { price: number; duration: string } | null => {
+  if (service?.tiers?.base) return service.tiers.base;
+  if (service?.tiers?.premium) return service.tiers.premium;
+  if (service?.price != null) return { price: service.price, duration: service.duration };
+  return null;
+};
+
 export default function StationDetail() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { station_id } = useLocalSearchParams<{ station_id: string }>();
 
   const [station, setStation] = useState<any>(null);
@@ -29,9 +53,6 @@ export default function StationDetail() {
   const [error, setError] = useState("");
 
   const [services, setServices] = useState<any[]>([]);
-  const [expandedServiceId, setExpandedServiceId] = useState<string | null>(
-    null,
-  );
 
   const [userRating, setUserRating] = useState<number>(0);
   const [avgRating, setAvgRating] = useState<number>(0);
@@ -48,7 +69,6 @@ export default function StationDetail() {
       setLoading(true);
       setError("");
       try {
-        
         // fetch both at the same time
         const [stationRes, servicesRes] = await Promise.all([
           fetch(`${API_BASE}/stations/public/${station_id}`),
@@ -92,21 +112,16 @@ export default function StationDetail() {
     fetchStation();
   }, [station_id]);
 
-  const toggleExpand = (serviceId: string) => {
-    setExpandedServiceId((prev) => (prev === serviceId ? null : serviceId));
-  };
-
-  const handleSelectTier = (service: any, tierKey: "base" | "premium") => {
-    const tier = service.tiers?.[tierKey];
-    if (!tier) return;
+  const handleScheduleService = (service: any) => {
+    const pricing = getServicePricing(service);
+    if (!pricing) return;
     router.push({
       pathname: "/(tabs)/Booking/booking",
       params: {
         service_id: service.id,
-        tier: tierKey,
         name: service.name,
-        price: String(tier.price),
-        duration: String(tier.duration),
+        price: String(pricing.price),
+        duration: String(pricing.duration),
         image_url: service.image_url || "",
         station_ids: JSON.stringify(service.station_ids || []),
       },
@@ -169,13 +184,23 @@ export default function StationDetail() {
       <StatusBar barStyle="dark-content" backgroundColor="#FDE9E6" />
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+      <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{
+            position: "absolute",
+            top: insets.top + 10,
+            left: 16,
+            backgroundColor: "rgba(255,255,255,0.85)",
+            borderRadius: 20,
+            padding: 8,
+            zIndex: 10,
+          }}
+        >
           <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>{station.name}</Text>
-        {/* <Ionicons name="information-circle-outline" size={22} color="#000" /> */}
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
@@ -225,7 +250,7 @@ export default function StationDetail() {
 
           <Text style={styles.aboutText}>{station.description}</Text>
 
-          {/* OFFERED SERVICES */}
+          {/* OFFERED SERVICES — display-only grid, no tiers, not clickable */}
           <Text style={styles.offeredHeading}>Offered Services:</Text>
 
           {services.length === 0 ? (
@@ -233,47 +258,22 @@ export default function StationDetail() {
               No services available at this station yet.
             </Text>
           ) : (
-            services.map((service) => {
-              const isExpanded = expandedServiceId === service.id;
-              const availableTiers = Object.keys(service.tiers || {}).filter(
-                (key) => service.tiers[key],
-              ) as Array<"base" | "premium">;
-
-              return (
-                <View key={service.id} style={styles.serviceAccordionItem}>
-                  <TouchableOpacity
-                    style={styles.serviceAccordionHeader}
-                    onPress={() => toggleExpand(service.id)}
-                  >
-                    <Text style={styles.serviceAccordionName}>
-                      {service.name}
-                    </Text>
+            <View style={styles.iconRow}>
+              {services.map((service) => (
+                <View key={service.id} style={styles.iconItem}>
+                  <View style={styles.iconCircle}>
                     <Ionicons
-                      name={isExpanded ? "chevron-up" : "chevron-down"}
-                      size={18}
+                      name={getServiceIcon(service.name)}
+                      size={24}
                       color="#fff"
                     />
-                  </TouchableOpacity>
-
-                  {isExpanded && (
-                    <View style={styles.serviceAccordionBody}>
-                      {availableTiers.map((tierKey) => (
-                        <TouchableOpacity
-                          key={tierKey}
-                          style={styles.tierButton}
-                          onPress={() => handleSelectTier(service, tierKey)}
-                        >
-                          <Text style={styles.tierButtonText}>
-                            {tierKey === "base" ? "Base" : "Premium"} — $
-                            {service.tiers[tierKey].price}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
+                  </View>
+                  <Text style={styles.iconLabel} numberOfLines={2}>
+                    {service.name}
+                  </Text>
                 </View>
-              );
-            })
+              ))}
+            </View>
           )}
 
           {/* IMAGE GRID */}
@@ -297,10 +297,16 @@ export default function StationDetail() {
           </View>
         </View>
 
-        {/* BUTTON */}
-        {/* <TouchableOpacity style={styles.button}>
-          <Text style={styles.buttonText}>Schedule</Text>
-        </TouchableOpacity> */}
+        {/* SCHEDULE BUTTON — only way to reach Booking from this screen */}
+        {services.length > 0 && (
+          <TouchableOpacity
+            style={styles.scheduleBtn}
+            onPress={() => handleScheduleService(services[0])}
+          >
+            <Text style={styles.buttonText}>Schedule</Text>
+          </TouchableOpacity>
+        )}
+
         {/* RATING SECTION */}
         <View style={styles.ratingCard}>
           <Text style={styles.ratingTitle}>Rate this Station</Text>
@@ -400,11 +406,10 @@ const styles = StyleSheet.create({
 
   header: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "flex-start",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
-    marginTop: 10, // 👈 only small spacing
   },
 
   headerTitle: {
@@ -446,9 +451,11 @@ const styles = StyleSheet.create({
     color: "gray",
   },
 
-  aboutCard: {
+aboutCard: {
     backgroundColor: "#1B2A41",
-    margin: 16,
+    marginHorizontal: 24,
+    marginTop: 16,
+    marginBottom: 0,
     padding: 16,
     borderRadius: 16,
   },
@@ -468,22 +475,31 @@ const styles = StyleSheet.create({
 
   iconRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    flexWrap: "wrap",
+    justifyContent: "flex-start",
     marginTop: 15,
   },
 
-  iconBox: {
+  iconItem: {
     alignItems: "center",
+    width: 70,
+    marginRight: 18,
+    marginBottom: 14,
+  },
+
+  iconCircle: {
+    alignItems: "center",
+    justifyContent: "center",
     backgroundColor: "#F97316",
-    padding: 8,
-    borderRadius: 20,
-    width: 62,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
   },
 
   iconLabel: {
     color: "#fff",
-    fontSize: 9,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 6,
     textAlign: "center",
   },
 
@@ -513,12 +529,16 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
   },
 
-  button: {
+scheduleBtn: {
     backgroundColor: "#F97316",
-    margin: 16,
-    padding: 14,
-    borderRadius: 12,
+    marginLeft: 24,
+    marginTop: 10,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 25,
     alignItems: "center",
+    alignSelf: "flex-start",
   },
 
   centered: {
@@ -548,46 +568,6 @@ const styles = StyleSheet.create({
     color: "#9aa5b8",
     fontSize: 12,
     fontStyle: "italic",
-  },
-
-  serviceAccordionItem: {
-    backgroundColor: "#243650",
-    borderRadius: 12,
-    marginBottom: 8,
-    overflow: "hidden",
-  },
-
-  serviceAccordionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-  },
-
-  serviceAccordionName: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-
-  serviceAccordionBody: {
-    paddingHorizontal: 14,
-    paddingBottom: 12,
-    gap: 8,
-  },
-
-  tierButton: {
-    backgroundColor: "#F97316",
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-
-  tierButtonText: {
-    color: "#fff",
-    fontSize: 13,
-    fontWeight: "600",
   },
 
   ratingCard: {

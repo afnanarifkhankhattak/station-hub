@@ -1,15 +1,26 @@
 // src/config.ts
+import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Use 10.0.2.2 for Android emulator (maps to host's localhost)
-// Use localhost for iOS simulator and web
-// Use your machine's real LAN IP for physical devices on the same network
-// src/config.ts
+const BACKEND_PORT = process.env.EXPO_PUBLIC_API_PORT || "8000";
+const FORCED_API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 const getBaseUrl = () => {
-  if (__DEV__) {
-    return "http://192.168.18.122:8000";
+  if (FORCED_API_URL) return FORCED_API_URL;
+
+  if (__DEV__ && Platform.OS === "android" && !Constants.expoConfig?.hostUri) {
+    return `http://10.0.2.2:${BACKEND_PORT}`;
   }
-  return "http://192.168.18.122:8000";
+
+  const hostUri =
+    Constants.expoConfig?.hostUri || Constants.expoGoConfig?.debuggerHost;
+  if (hostUri) {
+    const host = hostUri.split(":")[0];
+    return `http://${host}:${BACKEND_PORT}`;
+  }
+
+  return `http://localhost:${BACKEND_PORT}`;
 };
 
 export const API_BASE = getBaseUrl();
+console.log("API_BASE resolved to:", API_BASE);

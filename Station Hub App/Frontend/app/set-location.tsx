@@ -9,9 +9,11 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SetLocationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={styles.container}>
@@ -21,7 +23,7 @@ export default function SetLocationScreen() {
       />
 
       {/* Logo */}
-      <View style={styles.logoBox}>
+      <View style={[styles.logoBox, { marginTop: insets.top + 10 }] }>
         <Image
           source={require("../assets/images/Logo.png")}
           style={styles.logo}

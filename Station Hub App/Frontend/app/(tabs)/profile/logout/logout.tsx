@@ -1,5 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,8 +14,9 @@ export default function LogoutScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.card}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <View style={styles.card}>
 
         {/* ICON */}
         <View style={styles.iconCircle}>
@@ -43,8 +45,9 @@ export default function LogoutScreen() {
           </TouchableOpacity>
         </View>
 
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

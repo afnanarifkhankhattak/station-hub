@@ -9,9 +9,9 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-
-const API_BASE = "http://192.168.18.87:8000";
+import { API_BASE } from "../../src/config";
 
 export default function ResetPassword() {
   const router = useRouter();
@@ -56,7 +56,8 @@ export default function ResetPassword() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <SafeAreaView style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.container}>
 
       {/* Logo */}
       <View style={styles.logocolumn}>
@@ -140,7 +141,8 @@ export default function ResetPassword() {
         </View>
       )}
 
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 

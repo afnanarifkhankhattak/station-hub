@@ -10,6 +10,7 @@ import {
   ViewToken,
   StatusBar,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 const { width, height } = Dimensions.get("window");
@@ -60,8 +61,9 @@ export default function Onboarding() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" />
+    <SafeAreaView style={{ flex: 1 }}>
+      <View style={styles.container}>
+        <StatusBar translucent backgroundColor="transparent" />
 
       {/* SLIDES */}
       <FlatList
@@ -109,8 +111,9 @@ export default function Onboarding() {
             {currentIndex === slides.length - 1 ? "Get Started" : "Continue"}
           </Text>
         </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 

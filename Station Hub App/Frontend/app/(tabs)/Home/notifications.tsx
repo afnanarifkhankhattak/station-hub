@@ -8,6 +8,7 @@ import {
   StatusBar,
   ActivityIndicator,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -143,7 +144,7 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: "#FFF4EC" }}>
       <StatusBar barStyle="dark-content" backgroundColor="#FFF4EC" />
 
       <ScrollView
@@ -291,7 +292,7 @@ export default function NotificationsScreen() {
             );
           })}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -305,7 +306,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 50,
+    marginTop: 0,
     marginBottom: 20,
   },
 

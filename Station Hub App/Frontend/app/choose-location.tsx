@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MapView from "../components/Map";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -8,6 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export default function ChooseLocationScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [location, setLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -83,7 +85,7 @@ export default function ChooseLocationScreen() {
       />
 
       {/* LOCATION BUTTON */}
-      <TouchableOpacity style={styles.button} onPress={getLocation}>
+      <TouchableOpacity style={[styles.button, { top: insets.top + 10 }]} onPress={getLocation}>
         <Ionicons name="location-sharp" size={18} color="#fff" />
         <Text style={styles.buttonText}>Use Current Location</Text>
       </TouchableOpacity>

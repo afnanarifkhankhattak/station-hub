@@ -18,8 +18,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../src/config"; // adjust relative path as needed
 
-// const API_BASE = "http://192.168.1.10:8000";
-
 type Tier = { price: number; duration: string };
 type Service = {
   id: string;
