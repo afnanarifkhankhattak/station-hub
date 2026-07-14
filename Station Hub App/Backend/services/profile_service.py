@@ -4,7 +4,7 @@ from schemas.profile_schemas import UpdateProfileRequest, PrivacyAgreementReques
 import base64
 
 
-async def get_profile(user_id: str) -> dict:
+def get_profile(user_id: str) -> dict:
     doc = db.collection("users").document(user_id).get()
 
     if not doc.exists:
@@ -16,7 +16,7 @@ async def get_profile(user_id: str) -> dict:
     return {"user": {"id": user_id, **user}}
 
 
-async def update_profile(body: UpdateProfileRequest, user_id: str) -> dict:
+def update_profile(body: UpdateProfileRequest, user_id: str) -> dict:
     user_ref = db.collection("users").document(user_id)
 
     if not user_ref.get().exists:
@@ -32,7 +32,7 @@ async def update_profile(body: UpdateProfileRequest, user_id: str) -> dict:
     return {"message": "Profile updated successfully"}
 
 
-async def update_privacy_agreement(agreed: bool, user_id: str) -> dict:
+def update_privacy_agreement(agreed: bool, user_id: str) -> dict:
     user_ref = db.collection("users").document(user_id)
 
     if not user_ref.get().exists:
@@ -43,7 +43,7 @@ async def update_privacy_agreement(agreed: bool, user_id: str) -> dict:
     return {"agreed_to_privacy_policy": agreed, "message": "Privacy agreement updated successfully"}
 
 
-async def delete_account(user_id: str) -> dict:
+def delete_account(user_id: str) -> dict:
     user_ref = db.collection("users").document(user_id)
 
     if not user_ref.get().exists:
@@ -57,13 +57,13 @@ async def delete_account(user_id: str) -> dict:
     return {"message": "Account deleted successfully"}
 
 
-async def upload_avatar(file: UploadFile, user_id: str) -> dict:
+def upload_avatar(file: UploadFile, user_id: str) -> dict:
     # Validate file type
     if file.content_type not in ["image/jpeg", "image/png", "image/webp", "image/gif"]:
         raise HTTPException(status_code=400, detail="Only JPEG, PNG, WEBP, or GIF images allowed")
 
     # Read and check size (max 1MB for Firestore storage)
-    contents = await file.read()
+    contents = file.file.read()
     if len(contents) > 1 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="Image must be under 1MB")
 
@@ -80,7 +80,7 @@ async def upload_avatar(file: UploadFile, user_id: str) -> dict:
 
     return {"avatar_url": avatar_url, "message": "Avatar uploaded successfully"}
 
-async def update_push_token(push_token: str, user_id: str) -> dict:
+def update_push_token(push_token: str, user_id: str) -> dict:
     user_ref = db.collection("users").document(user_id)
     if not user_ref.get().exists:
         raise HTTPException(status_code=404, detail="User not found")

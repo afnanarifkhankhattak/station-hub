@@ -4,16 +4,12 @@ from config.firebase import db
 from models.booking_model import BookingModel
 from schemas.booking_schemas import BookingRequest
 from utils.email_handler import send_booking_email
-from fastapi import HTTPException
-from config.firebase import db
-from models.booking_model import BookingModel
-from schemas.booking_schemas import BookingRequest
-from utils.email_handler import send_booking_email
-from firebase_admin import firestore   # ← add this line
+from firebase_admin import firestore
+import threading
 
 
 
-async def create_booking(body: BookingRequest, user_id: str) -> dict:
+def create_booking(body: BookingRequest, user_id: str) -> dict:
     station_doc = db.collection("stations").document(body.station_id).get()
     if not station_doc.exists:
         raise HTTPException(status_code=404, detail="Station not found")
@@ -49,7 +45,10 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
             if owner_doc.exists:
                 owner_email = owner_doc.to_dict().get("email")
                 if owner_email:
-                    send_booking_email(owner_email, booking.to_dict(), station_name)
+                    threading.Thread(
+                        target=send_booking_email, 
+                        args=(owner_email, booking.to_dict(), station_name)
+                    ).start()
     except Exception as e:
         print(f"Notification error: {e}")
 
@@ -58,8 +57,15 @@ async def create_booking(body: BookingRequest, user_id: str) -> dict:
         "booking": {"id": booking_id, **booking.to_dict()},
     }
 
+def get_unread_count(user_id: str) -> dict:
+    docs = (db.collection("bookings")
+        .where("user_id", "==", user_id)
+        .where("customer_read", "==", False)
+        .stream())
+    count = sum(1 for d in docs if d.to_dict().get("status") != "pending")
+    return {"unread_count": count}
 
-async def get_my_bookings(user_id: str) -> dict:
+def get_my_bookings(user_id: str) -> dict:
     docs = db.collection("bookings").where("user_id", "==", user_id).stream()
     bookings = [{"id": d.id, **d.to_dict()} for d in docs]
 
@@ -92,7 +98,7 @@ async def get_my_bookings(user_id: str) -> dict:
         station = stations.get(b.get("station_id"), {})
         service = services.get(b.get("service_id"), {})
         tier = b.get("tier")
-        tiers = service.get("tiers", {})
+        tiers = service.get("tiers") or {}
 
         b["station_name"] = station.get("name", "")
         b["service_name"] = service.get("name", "")
@@ -103,7 +109,7 @@ async def get_my_bookings(user_id: str) -> dict:
     return {"bookings": bookings}
 
 
-async def get_booking_by_id(booking_id: str, user_id: str) -> dict:
+def get_booking_by_id(booking_id: str, user_id: str) -> dict:
     doc = db.collection("bookings").document(booking_id).get()
 
     if not doc.exists:
@@ -117,7 +123,7 @@ async def get_booking_by_id(booking_id: str, user_id: str) -> dict:
     return {"booking": {"id": doc.id, **booking}}
 
 
-async def cancel_booking(booking_id: str, user_id: str) -> dict:
+def cancel_booking(booking_id: str, user_id: str) -> dict:
     doc_ref = db.collection("bookings").document(booking_id)
     doc = doc_ref.get()
 
@@ -131,7 +137,7 @@ async def cancel_booking(booking_id: str, user_id: str) -> dict:
 
     return {"message": "Booking cancelled"}
 
-async def mark_booking_read(booking_id: str, user_id: str) -> dict:
+def mark_booking_read(booking_id: str, user_id: str) -> dict:
     doc_ref = db.collection("bookings").document(booking_id)
     doc = doc_ref.get()
 
@@ -146,42 +152,19 @@ async def mark_booking_read(booking_id: str, user_id: str) -> dict:
     return {"message": "Marked as read"}
 
 
-async def get_booked_slots(station_id: str, date: str) -> list[str]:
-    """
-    OPTIMIZED: Excludes cancelled/rejected bookings at the DB query level
-    using 'not-in' filter instead of downloading them and filtering in Python.
-    """
-    docs = (
-        db.collection("bookings")
-        .where("station_id", "==", station_id)
-        .where("travel_date", "==", date)
-        .where("status", "not-in", ["cancelled", "rejected"])
-        .stream()
-    )
-
+def get_booked_slots(station_id: str, date: str) -> list[str]:
+    excluded_statuses = {"cancelled", "rejected"}
+    docs = db.collection("bookings").where("station_id", "==", station_id).stream()
+    
     slots = []
     for doc in docs:
-        time = doc.to_dict().get("travel_time")
+        data = doc.to_dict()
+        if data.get("travel_date") != date:
+            continue
+        if data.get("status") in excluded_statuses:
+            continue
+        time = data.get("travel_time")
         if time:
             slots.append(time)
-
+    
     return slots
-
-
-async def get_unread_count(user_id: str) -> dict:
-    """
-    Lightweight query: returns only the count of bookings that have a
-    non-pending status and have not been read by the customer.
-    Used by the notification badge — avoids fetching full enriched bookings.
-    """
-    docs = (
-        db.collection("bookings")
-        .where("user_id", "==", user_id)
-        .where("customer_read", "==", False)
-        .stream()
-    )
-    count = sum(
-        1 for doc in docs
-        if doc.to_dict().get("status") != "pending"
-    )
-    return {"count": count}

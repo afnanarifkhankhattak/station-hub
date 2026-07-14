@@ -81,13 +81,15 @@ export default function HomeScreen() {
       try {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
-        // OPTIMIZED: single lightweight count query instead of fetching all bookings
-        const res = await apiFetch(`${API_BASE}/bookings/unread-count`, {
+        const res = await apiFetch(`${API_BASE}/bookings/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (res.ok) {
-          setUnreadCount(data.count ?? 0);
+          const unread = (data.bookings || []).filter(
+            (b: any) => b.status !== "pending" && !b.customer_read,
+          );
+          setUnreadCount(unread.length);
         }
       } catch (e) {
         // silently ignore — badge just won't show
@@ -125,6 +127,18 @@ export default function HomeScreen() {
     // "nearest" — no data yet, list stays in default order for now
     return list;
   }, [stations, sortBy]);
+const StationSkeleton = () => (
+  <View style={styles.serviceCard}>
+    <View style={[styles.serviceImage, { backgroundColor: "#e0e0e0" }]} />
+    <View style={{ flex: 1, justifyContent: "center" }}>
+      <View style={{ width: "70%", height: 16, backgroundColor: "#e0e0e0", borderRadius: 4, marginBottom: 8 }} />
+      <View style={{ width: "90%", height: 12, backgroundColor: "#e0e0e0", borderRadius: 4, marginBottom: 8 }} />
+      <View style={{ width: "40%", height: 12, backgroundColor: "#e0e0e0", borderRadius: 4 }} />
+    </View>
+    <View style={{ width: 18, height: 18, backgroundColor: "#e0e0e0", borderRadius: 9 }} />
+  </View>
+);
+
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
@@ -134,8 +148,20 @@ export default function HomeScreen() {
         contentContainerStyle={{ paddingBottom: 120 }}
         onEndReached={loadMore}
         onEndReachedThreshold={0.5}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+        removeClippedSubviews={true}
         ListFooterComponent={loadingStations && offset > 0 ? <ActivityIndicator size="small" color="#FF7A45" style={{ marginVertical: 20 }} /> : null}
-        ListEmptyComponent={loadingStations && offset === 0 ? <ActivityIndicator size="large" color="#FF7A45" style={{ marginVertical: 40 }} /> : null}
+        ListEmptyComponent={loadingStations && offset === 0 ? (
+          <View>
+            <StationSkeleton />
+            <StationSkeleton />
+            <StationSkeleton />
+            <StationSkeleton />
+            <StationSkeleton />
+          </View>
+        ) : null}
         ListHeaderComponent={
           <>
         {/* HEADER */}

@@ -18,49 +18,49 @@ router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
 @router.post("/register")
-async def register(body: RegisterRequest):
-    return await auth_service.register_user(body)
+def register(body: RegisterRequest):
+    return auth_service.register_user(body)
 
 
 @router.post("/login")
-async def login(body: LoginRequest):
-    return await auth_service.login_user(body)
+def login(body: LoginRequest):
+    return auth_service.login_user(body)
 
 
 @router.post("/forgot-password")
-async def forgot_password(body: ForgotPasswordRequest):
-    return await auth_service.forgot_password(body)
+def forgot_password(body: ForgotPasswordRequest):
+    return auth_service.forgot_password(body)
 
 
 @router.post("/verify-otp")
-async def verify_otp(body: VerifyOTPRequest):
-    return await auth_service.verify_otp(body)
+def verify_otp(body: VerifyOTPRequest):
+    return auth_service.verify_otp(body)
 
 
 @router.post("/reset-password")
-async def reset_password(body: ResetPasswordRequest):
-    return await auth_service.reset_password(body)
+def reset_password(body: ResetPasswordRequest):
+    return auth_service.reset_password(body)
 
 
 @router.post("/change-password")
-async def change_password(body: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
-    return await auth_service.change_password(body, current_user["sub"])
+def change_password(body: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    return auth_service.change_password(body, current_user["sub"])
 
 @router.get("/me")
-async def get_me(current_user: dict = Depends(get_current_user)):
-    return await auth_service.get_current_user_profile(current_user["sub"])
+def get_me(current_user: dict = Depends(get_current_user)):
+    return auth_service.get_current_user_profile(current_user["sub"])
 
 
 @router.put("/me")
-async def update_me(body: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
-    return await auth_service.update_current_user_profile(body, current_user["sub"])
+def update_me(body: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
+    return auth_service.update_current_user_profile(body, current_user["sub"])
 
 
 @router.post("/google")
-async def google_login(body: GoogleLoginRequest):
-    return await auth_service.google_login(body.id_token)
+def google_login(body: GoogleLoginRequest):
+    return auth_service.google_login(body.id_token)
 
 
 @router.post("/refresh")
-async def refresh_token(body: RefreshTokenRequest):
-    return await auth_service.refresh_access_token(body.refresh_token)
+def refresh_token(body: RefreshTokenRequest):
+    return auth_service.refresh_access_token(body.refresh_token)

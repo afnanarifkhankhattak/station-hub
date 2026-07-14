@@ -7,29 +7,29 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
 @router.get("/")
-async def get_profile(current_user: dict = Depends(get_current_user)):
-    return await profile_service.get_profile(current_user["sub"])
+def get_profile(current_user: dict = Depends(get_current_user)):
+    return profile_service.get_profile(current_user["sub"])
 
 
 @router.put("/")
-async def update_profile(body: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
-    return await profile_service.update_profile(body, current_user["sub"])
+def update_profile(body: UpdateProfileRequest, current_user: dict = Depends(get_current_user)):
+    return profile_service.update_profile(body, current_user["sub"])
 
 @router.put("/privacy-agreement")
-async def update_privacy_agreement(body: PrivacyAgreementRequest, current_user: dict = Depends(get_current_user)):
-    return await profile_service.update_privacy_agreement(body.agreed, current_user["sub"])
+def update_privacy_agreement(body: PrivacyAgreementRequest, current_user: dict = Depends(get_current_user)):
+    return profile_service.update_privacy_agreement(body.agreed, current_user["sub"])
 
 
 @router.delete("/")
-async def delete_account(current_user: dict = Depends(get_current_user)):
-    return await profile_service.delete_account(current_user["sub"])
+def delete_account(current_user: dict = Depends(get_current_user)):
+    return profile_service.delete_account(current_user["sub"])
 
 
 @router.post("/upload-avatar")
-async def upload_avatar(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
-    return await profile_service.upload_avatar(file, current_user["sub"])
+def upload_avatar(file: UploadFile = File(...), current_user: dict = Depends(get_current_user)):
+    return profile_service.upload_avatar(file, current_user["sub"])
 
 @router.put("/push-token")
-async def update_push_token(body: dict, current_user: dict = Depends(get_current_user)):
-    return await profile_service.update_push_token(body.get("push_token"), current_user["sub"])
+def update_push_token(body: dict, current_user: dict = Depends(get_current_user)):
+    return profile_service.update_push_token(body.get("push_token"), current_user["sub"])
 

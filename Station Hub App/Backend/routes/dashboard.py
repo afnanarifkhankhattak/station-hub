@@ -6,14 +6,14 @@ router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 
 @router.get("/stats")
-async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
-    return await dashboard_service.get_dashboard_stats(current_user["sub"])
+def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
+    return dashboard_service.get_dashboard_stats(current_user["sub"])
 
 
 @router.patch("/bookings/{booking_id}/status")
-async def update_booking_status(
+def update_booking_status(
     booking_id: str,
     body: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    return await dashboard_service.update_booking_status(booking_id, body.get("status"))
+    return dashboard_service.update_booking_status(booking_id, body.get("status"))

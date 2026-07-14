@@ -194,51 +194,55 @@ export default function BookingScreen() {
 
   const selectedStation = selectedStationObj;
 
-  // ── OPTIMIZED: Initial load — runs once on mount (or when the pre-selected
-  // station_ids param changes). Selecting a station no longer re-triggers this.
   useEffect(() => {
-    const initialLoad = async () => {
+    const fetchStations = async () => {
       setLoadingStations(true);
       setStationsError("");
       try {
-        const res = await apiFetch(`${API_BASE}/stations/public?limit=20`);
+        const q = stationSearch.trim();
+        const url = q 
+          ? `${API_BASE}/stations/public/search?q=${encodeURIComponent(q)}` 
+          : `${API_BASE}/stations/public?limit=20`;
+        const res = await apiFetch(url);
         const data = await res.json();
         const list: Station[] = data.stations || [];
         setAllStations(list);
 
-        if (list.length === 0) {
+        if (list.length === 0 && !selectedStationObj) {
           setStationsError("No stations available right now.");
           return;
         }
 
-        // Pre-select from param if provided
-        let preselectId: string | null = null;
-        if (params.station_ids) {
-          try {
-            const ids: string[] = JSON.parse(params.station_ids);
-            preselectId = ids[0] || null;
-          } catch {}
-        }
-
-        if (preselectId) {
-          const found = list.find((s) => s.id === preselectId);
-          if (found) {
-            setSelectedStationId(found.id);
-            setSelectedStationObj(found);
-          } else {
-            // Fetch the single station if it wasn't in the first page
-            const singleRes = await apiFetch(`${API_BASE}/stations/public/${preselectId}`);
-            if (singleRes.ok) {
-              const singleData = await singleRes.json();
-              if (singleData.station) {
-                setSelectedStationId(singleData.station.id);
-                setSelectedStationObj(singleData.station);
+        // Only preselect on initial load
+        if (!selectedStationObj) {
+          let preselectId: string | null = null;
+          if (params.station_ids) {
+            try {
+              const ids: string[] = JSON.parse(params.station_ids);
+              preselectId = ids[0] || null;
+            } catch {}
+          }
+          
+          if (preselectId) {
+            const found = list.find((s) => s.id === preselectId);
+            if (found) {
+              setSelectedStationId(found.id);
+              setSelectedStationObj(found);
+            } else {
+              // fetch single station
+              const singleRes = await apiFetch(`${API_BASE}/stations/public/${preselectId}`);
+              if (singleRes.ok) {
+                const singleData = await singleRes.json();
+                if (singleData.station) {
+                  setSelectedStationId(singleData.station.id);
+                  setSelectedStationObj(singleData.station);
+                }
               }
             }
+          } else if (list.length > 0) {
+             setSelectedStationId(list[0].id);
+             setSelectedStationObj(list[0]);
           }
-        } else {
-          setSelectedStationId(list[0].id);
-          setSelectedStationObj(list[0]);
         }
       } catch (e) {
         setStationsError("Failed to load stations");
@@ -246,35 +250,13 @@ export default function BookingScreen() {
         setLoadingStations(false);
       }
     };
-
-    initialLoad();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params.station_ids]); // intentionally omit selectedStationObj — selecting doesn't re-fetch
-
-  // ── OPTIMIZED: Search — only fires when the user types a query.
-  // Empty search does NOT re-fetch (the initial load already has the list).
-  useEffect(() => {
-    const q = stationSearch.trim();
-    if (!q) return; // nothing to search — keep the list from initial load
-
-    const timer = setTimeout(async () => {
-      setLoadingStations(true);
-      setStationsError("");
-      try {
-        const res = await apiFetch(
-          `${API_BASE}/stations/public/search?q=${encodeURIComponent(q)}`
-        );
-        const data = await res.json();
-        setAllStations(data.stations || []);
-      } catch {
-        setStationsError("Failed to search stations");
-      } finally {
-        setLoadingStations(false);
-      }
+    
+    const timer = setTimeout(() => {
+      fetchStations();
     }, 400);
-
+    
     return () => clearTimeout(timer);
-  }, [stationSearch]);
+  }, [stationSearch, params.station_ids]);
 
   useEffect(() => {
     (async () => {

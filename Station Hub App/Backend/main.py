@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from middleware.timing import TimingMiddleware
+
 from routes import auth
 from routes import profile
 from routes import stations
@@ -11,6 +14,8 @@ from routes import favorites
 
 app = FastAPI()
 
+app.add_middleware(GZipMiddleware, minimum_size=500)
+app.add_middleware(TimingMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

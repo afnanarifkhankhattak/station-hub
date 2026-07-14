@@ -19,7 +19,7 @@ from utils.email_handler import generate_otp, send_otp_email
 
 
 # ─── Register ───────────────────────────────────────────────
-async def register_user(body: RegisterRequest) -> dict:
+def register_user(body: RegisterRequest) -> dict:
     existing = db.collection("users").where("email", "==", body.email).limit(1).get()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
@@ -52,7 +52,7 @@ async def register_user(body: RegisterRequest) -> dict:
 
 
 # ─── Login ──────────────────────────────────────────────────
-async def login_user(body: LoginRequest) -> dict:
+def login_user(body: LoginRequest) -> dict:
     docs = db.collection("users").where("email", "==", body.email).limit(1).get()
     if not docs:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
@@ -81,7 +81,7 @@ async def login_user(body: LoginRequest) -> dict:
 
 
 # ─── Forgot Password ────────────────────────────────────────
-async def forgot_password(body: ForgotPasswordRequest) -> dict:
+def forgot_password(body: ForgotPasswordRequest) -> dict:
     docs = db.collection("users").where("email", "==", body.email).limit(1).get()
     if not docs:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Email not found")
@@ -103,7 +103,7 @@ async def forgot_password(body: ForgotPasswordRequest) -> dict:
 
 
 # ─── Verify OTP ─────────────────────────────────────────────
-async def verify_otp(body: VerifyOTPRequest) -> dict:
+def verify_otp(body: VerifyOTPRequest) -> dict:
     otp_doc = db.collection("otps").document(body.email).get()
     if not otp_doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP not found")
@@ -122,7 +122,7 @@ async def verify_otp(body: VerifyOTPRequest) -> dict:
 
 
 # ─── Reset Password ─────────────────────────────────────────
-async def reset_password(body: ResetPasswordRequest) -> dict:
+def reset_password(body: ResetPasswordRequest) -> dict:
     otp_doc = db.collection("otps").document(body.email).get()
     if not otp_doc.exists:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="OTP not found")
@@ -146,7 +146,7 @@ async def reset_password(body: ResetPasswordRequest) -> dict:
 
 
 # ─── Change Password ────────────────────────────────────────
-async def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
+def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
     user_doc = db.collection("users").document(user_id).get()
     if not user_doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -164,7 +164,7 @@ async def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
 
 # ─── google Auth ────────────────────────────────────────
 
-async def google_login(id_token: str) -> dict:
+def google_login(id_token: str) -> dict:
     try:
         decoded = firebase_auth.verify_id_token(id_token, clock_skew_seconds=10)
     except Exception as e:
@@ -211,7 +211,7 @@ async def google_login(id_token: str) -> dict:
 
 
 # ─── Get Current User ───────────────────────────────────────
-async def get_current_user_profile(user_id: str) -> dict:
+def get_current_user_profile(user_id: str) -> dict:
     user_doc = db.collection("users").document(user_id).get()
     if not user_doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -228,7 +228,7 @@ async def get_current_user_profile(user_id: str) -> dict:
 
 
 # ─── Update Current User ────────────────────────────────────
-async def update_current_user_profile(body: UpdateProfileRequest, user_id: str) -> dict:
+def update_current_user_profile(body: UpdateProfileRequest, user_id: str) -> dict:
     user_doc = db.collection("users").document(user_id).get()
     if not user_doc.exists:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -255,7 +255,7 @@ async def update_current_user_profile(body: UpdateProfileRequest, user_id: str) 
     }
 
 # ─── Refresh Token ──────────────────────────────────────────
-async def refresh_access_token(refresh_token: str) -> dict:
+def refresh_access_token(refresh_token: str) -> dict:
     payload = verify_token(refresh_token, token_type="refresh")
     if not payload or payload.get("type") != "refresh":
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")

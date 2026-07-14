@@ -37,7 +37,7 @@ DEFAULTS = {
 }
 
 
-async def get_settings(user_id: str) -> dict:
+def get_settings(user_id: str) -> dict:
     doc = db.collection("shop_settings").document(user_id).get()
     if not doc.exists:
         db.collection("shop_settings").document(user_id).set(DEFAULTS)
@@ -45,7 +45,7 @@ async def get_settings(user_id: str) -> dict:
     return {"settings": doc.to_dict()}
 
 
-async def update_section(body: BaseModel, user_id: str) -> dict:
+def update_section(body: BaseModel, user_id: str) -> dict:
     ref = db.collection("shop_settings").document(user_id)
     if not ref.get().exists:
         db.collection("shop_settings").document(user_id).set(DEFAULTS)
@@ -60,7 +60,7 @@ async def update_section(body: BaseModel, user_id: str) -> dict:
     return {"message": "Settings updated successfully"}
 
 
-async def get_categories() -> dict:
+def get_categories() -> dict:
     doc = db.collection("app_config").document("categories").get()
     if not doc.exists:
         db.collection("app_config").document("categories").set(
@@ -70,7 +70,7 @@ async def get_categories() -> dict:
     return {"categories": doc.to_dict().get("list", DEFAULT_CATEGORIES)}
 
 
-async def add_category(name: str) -> dict:
+def add_category(name: str) -> dict:
     name = name.strip()
     if not name:
         raise HTTPException(status_code=400, detail="Category name cannot be empty")
