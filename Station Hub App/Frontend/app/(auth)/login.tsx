@@ -18,6 +18,8 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import * as AuthSession from "expo-auth-session";
 import { API_BASE } from "../../src/config";
+import { apiFetch } from "../../src/api";
+
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -51,7 +53,7 @@ const showError = (message: string) => {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/login`, {
+      const response = await apiFetch(`${API_BASE}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -59,6 +61,7 @@ const showError = (message: string) => {
       const data = await response.json();
       if (response.ok) {
         await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("refresh_token", data.refresh_token);
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
         showToast("Success, Welcome Back!");
       } else {

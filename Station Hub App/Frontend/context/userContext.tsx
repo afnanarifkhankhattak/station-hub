@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../src/config"; // adjust relative path as needed
+import { apiFetch } from "../src/api";
+
 
 type UserProfile = {
   id: string;
@@ -42,7 +44,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
 
       // fetch fresh in background
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await apiFetch(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();

@@ -48,7 +48,6 @@ async def get_public_services() -> dict:
     services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"services": services}
 
-
 async def get_services_for_station(station_id: str) -> dict:
     status_docs = (
         db.collection("serviceStationStatus")
@@ -56,24 +55,18 @@ async def get_services_for_station(station_id: str) -> dict:
         .where("isAvailable", "==", True)
         .stream()
     )
-    service_ids = [d.to_dict().get("serviceId") for d in status_docs]
-    service_ids = [sid for sid in service_ids if sid]
+    service_ids = list({d.to_dict().get("serviceId") for d in status_docs if d.to_dict().get("serviceId")})
 
     if not service_ids:
         return {"services": []}
 
-    # fetch all at once using threads instead of one by one
-    import concurrent.futures
-
-    def fetch_service(sid):
-        doc = db.collection("services").document(sid).get()
+    # Fetch all at once using native bulk get (No ThreadPool needed)
+    service_refs = [db.collection("services").document(sid) for sid in service_ids]
+    
+    services = []
+    for doc in db.get_all(service_refs):
         if doc.exists:
-            return {"id": doc.id, **doc.to_dict()}
-        return None
+            services.append({"id": doc.id, **doc.to_dict()})
 
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        results = list(executor.map(fetch_service, service_ids))
-
-    services = [s for s in results if s]
     services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"services": services}

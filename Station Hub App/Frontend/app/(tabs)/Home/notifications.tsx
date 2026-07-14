@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../src/api";
+
 
 const STATUS_STYLES: Record<
   string,
@@ -69,7 +71,7 @@ export default function NotificationsScreen() {
       }
 
       // fetch fresh in background
-      const res = await fetch(`${API_BASE}/bookings/`, {
+      const res = await apiFetch(`${API_BASE}/bookings/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -116,7 +118,7 @@ export default function NotificationsScreen() {
 
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/bookings/${bookingId}/read`, {
+      const res = await apiFetch(`${API_BASE}/bookings/${bookingId}/read`, {
         method: "PATCH",
         headers: { Authorization: `Bearer ${token}` },
       });

@@ -16,6 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../../context/userContext"; // adjust relative path to match this file's depth
 import { API_BASE } from "../../../../src/config"; // adjust relative path to match this file's depth
+import { apiFetch } from "../../../../src/api";
+
 
 export default function PrivacyPolicyScreen() {
   const router = useRouter();
@@ -42,7 +44,7 @@ export default function PrivacyPolicyScreen() {
     setSaving(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/profile/privacy-agreement`, {
+      const res = await apiFetch(`${API_BASE}/profile/privacy-agreement`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

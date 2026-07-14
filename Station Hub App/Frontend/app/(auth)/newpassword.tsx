@@ -12,6 +12,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { API_BASE } from "../../src/config";
+import { apiFetch } from "../../src/api";
+
 
 export default function CreatePassword() {
   const router = useRouter();
@@ -44,7 +46,7 @@ export default function CreatePassword() {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/reset-password`, {
+      const response = await apiFetch(`${API_BASE}/auth/reset-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp, new_password: password }),

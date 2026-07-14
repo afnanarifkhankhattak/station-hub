@@ -24,6 +24,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Location from "expo-location";
 import { API_BASE } from "../../../src/config";
 import { useUser } from "../../../context/userContext";
+import { apiFetch } from "../../../src/api";
+
 
 /* ────────────────────────────────────────────────────────────
    TYPES
@@ -52,6 +54,7 @@ type Service = {
   description?: string;
   image_url?: string;
   tiers?: { base?: Tier; premium?: Tier };
+  categories?: Record<string, { base?: Tier; premium?: Tier }>;
 };
 
 /* Business rules for price adjustment that the API does not (yet) expose.
@@ -181,6 +184,7 @@ export default function BookingScreen() {
   const [selectedStationId, setSelectedStationId] = useState<string | null>(
     null,
   );
+  const [selectedStationObj, setSelectedStationObj] = useState<Station | null>(null);
   const [stationModalVisible, setStationModalVisible] = useState(false);
   const [stationSearch, setStationSearch] = useState("");
   const [userCoords, setUserCoords] = useState<{
@@ -188,14 +192,16 @@ export default function BookingScreen() {
     longitude: number;
   } | null>(null);
 
-  const selectedStation = allStations.find((s) => s.id === selectedStationId);
+  const selectedStation = selectedStationObj;
 
+  // ── OPTIMIZED: Initial load — runs once on mount (or when the pre-selected
+  // station_ids param changes). Selecting a station no longer re-triggers this.
   useEffect(() => {
-    const fetchStations = async () => {
+    const initialLoad = async () => {
       setLoadingStations(true);
       setStationsError("");
       try {
-        const res = await fetch(`${API_BASE}/stations/public`);
+        const res = await apiFetch(`${API_BASE}/stations/public?limit=20`);
         const data = await res.json();
         const list: Station[] = data.stations || [];
         setAllStations(list);
@@ -205,26 +211,70 @@ export default function BookingScreen() {
           return;
         }
 
-        // preselect: from params if it matches one of the returned
-        // stations, otherwise the first available station
-        let preselect: string | null = null;
+        // Pre-select from param if provided
+        let preselectId: string | null = null;
         if (params.station_ids) {
           try {
             const ids: string[] = JSON.parse(params.station_ids);
-            preselect = ids.find((id) => list.some((s) => s.id === id)) || null;
-          } catch {
-            preselect = null;
-          }
+            preselectId = ids[0] || null;
+          } catch {}
         }
-        setSelectedStationId(preselect || list[0].id);
+
+        if (preselectId) {
+          const found = list.find((s) => s.id === preselectId);
+          if (found) {
+            setSelectedStationId(found.id);
+            setSelectedStationObj(found);
+          } else {
+            // Fetch the single station if it wasn't in the first page
+            const singleRes = await apiFetch(`${API_BASE}/stations/public/${preselectId}`);
+            if (singleRes.ok) {
+              const singleData = await singleRes.json();
+              if (singleData.station) {
+                setSelectedStationId(singleData.station.id);
+                setSelectedStationObj(singleData.station);
+              }
+            }
+          }
+        } else {
+          setSelectedStationId(list[0].id);
+          setSelectedStationObj(list[0]);
+        }
       } catch (e) {
         setStationsError("Failed to load stations");
       } finally {
         setLoadingStations(false);
       }
     };
-    fetchStations();
-  }, []);
+
+    initialLoad();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.station_ids]); // intentionally omit selectedStationObj — selecting doesn't re-fetch
+
+  // ── OPTIMIZED: Search — only fires when the user types a query.
+  // Empty search does NOT re-fetch (the initial load already has the list).
+  useEffect(() => {
+    const q = stationSearch.trim();
+    if (!q) return; // nothing to search — keep the list from initial load
+
+    const timer = setTimeout(async () => {
+      setLoadingStations(true);
+      setStationsError("");
+      try {
+        const res = await apiFetch(
+          `${API_BASE}/stations/public/search?q=${encodeURIComponent(q)}`
+        );
+        const data = await res.json();
+        setAllStations(data.stations || []);
+      } catch {
+        setStationsError("Failed to search stations");
+      } finally {
+        setLoadingStations(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [stationSearch]);
 
   useEffect(() => {
     (async () => {
@@ -271,7 +321,7 @@ export default function BookingScreen() {
       setLoadingServices(true);
       setServicesError("");
       try {
-        const res = await fetch(
+        const res = await apiFetch(
           `${API_BASE}/services/public/station/${selectedStationId}`,
         );
         const data = await res.json();
@@ -421,7 +471,7 @@ export default function BookingScreen() {
     }
     setLoadingSlots(true);
     try {
-      const res = await fetch(
+      const res = await apiFetch(
         `${API_BASE}/bookings/slots?station_id=${selectedStationId}&date=${selectedDate}`,
       );
       const data = await res.json();
@@ -449,14 +499,22 @@ export default function BookingScreen() {
 
   /* ── Vehicle & special request ────────────────────────────── */
   const [vehicleType, setVehicleType] = useState<"Car" | "Motorbike">("Car");
+  const [carCategory, setCarCategory] = useState<string>("sedan");
   const [vehicleBrand, setVehicleBrand] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [specialRequest, setSpecialRequest] = useState("");
 
-  /* ── Price summary (derived from dynamic service tier) ───── */
   const basePrice = React.useMemo(() => {
-    return selectedService?.tiers?.base?.price ?? null;
-  }, [selectedService]);
+    if (!selectedService) return null;
+    
+    // If Car and categories exist for the selected category, use it
+    if (vehicleType === "Car" && selectedService.categories && selectedService.categories[carCategory]?.base?.price) {
+      return selectedService.categories[carCategory].base.price;
+    }
+    
+    // Fallback to legacy general tiers
+    return selectedService.tiers?.base?.price ?? null;
+  }, [selectedService, vehicleType, carCategory]);
 
   const adjustedPrice = React.useMemo(() => {
     if (basePrice == null) return null;
@@ -499,7 +557,7 @@ export default function BookingScreen() {
         return;
       }
 
-      const res = await fetch(`${API_BASE}/bookings/`, {
+      const res = await apiFetch(`${API_BASE}/bookings/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -539,9 +597,7 @@ export default function BookingScreen() {
   };
 
   /* ── Render ───────────────────────────────────────────────── */
-  const filteredStations = allStations.filter((s) =>
-    s.name.toLowerCase().includes(stationSearch.trim().toLowerCase()),
-  );
+  const filteredStations = allStations;
 
   return (
     <LinearGradient
@@ -842,6 +898,42 @@ export default function BookingScreen() {
               </TouchableOpacity>
             ))}
           </View>
+          
+          {/* CAR CATEGORY SELECTOR */}
+          {vehicleType === "Car" && (
+            <View style={{ paddingHorizontal: 18, marginTop: 15 }}>
+              <Text style={{ fontSize: 13, fontWeight: "600", marginBottom: 8, color: "#444" }}>Car Category</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row" }}>
+                {[
+                  { id: "sedan", label: "Sedan" },
+                  { id: "hatchback", label: "Hatchback" },
+                  { id: "suv", label: "SUV/Crossover" },
+                  { id: "microcar", label: "Microcar" },
+                  { id: "pickup", label: "Pickup" },
+                ].map(cat => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setCarCategory(cat.id)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: carCategory === cat.id ? "#FF7A00" : "#f0f0f0",
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text style={{ 
+                      fontSize: 12, 
+                      fontWeight: "600", 
+                      color: carCategory === cat.id ? "#fff" : "#444" 
+                    }}>
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
 
           {/* INPUTS */}
           <View style={styles.inputRow}>
@@ -958,6 +1050,7 @@ export default function BookingScreen() {
                     ]}
                     onPress={() => {
                       setSelectedStationId(item.id);
+                      setSelectedStationObj(item);
                       setSelectedDate(null);
                       setSelectedTime(null);
                       setStationModalVisible(false);

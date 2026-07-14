@@ -14,6 +14,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../src/api";
+
 
 export default function BookingConfirmedScreen() {
   const router = useRouter();
@@ -42,7 +44,7 @@ export default function BookingConfirmedScreen() {
           return;
         }
 
-        const res = await fetch(`${API_BASE}/bookings/${params.booking_id}`, {
+        const res = await apiFetch(`${API_BASE}/bookings/${params.booking_id}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -57,7 +59,7 @@ export default function BookingConfirmedScreen() {
 
         // fetch station details
         if (bk.station_id) {
-          const stRes = await fetch(`${API_BASE}/stations/${bk.station_id}`, {
+          const stRes = await apiFetch(`${API_BASE}/stations/${bk.station_id}`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (stRes.ok) {
@@ -69,7 +71,7 @@ export default function BookingConfirmedScreen() {
         // fetch service name (owner-only endpoint, so this may fail for non-owners — handled gracefully)
         if (bk.service_id) {
           try {
-            const svcRes = await fetch(`${API_BASE}/services/public`);
+            const svcRes = await apiFetch(`${API_BASE}/services/public`);
             if (svcRes.ok) {
               const svcData = await svcRes.json();
               const match = (svcData.services || []).find(

@@ -3,6 +3,8 @@ import * as Device from "expo-device";
 import { Platform } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "./config";
+import { apiFetch } from "./api";
+
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -51,7 +53,7 @@ export async function registerPushToken() {
   const authToken = await AsyncStorage.getItem("token");
   if (!authToken) return;
 
-  await fetch(`${API_BASE}/profile/push-token`, {
+  await apiFetch(`${API_BASE}/profile/push-token`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

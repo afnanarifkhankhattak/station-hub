@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from fastapi import HTTPException
 from config.firebase import db
 from models.booking_model import BookingModel
@@ -65,25 +66,28 @@ async def get_my_bookings(user_id: str) -> dict:
     if not bookings:
         return {"bookings": []}
 
-    # collect unique IDs
+    # Collect unique IDs
     station_ids = list({b["station_id"] for b in bookings if b.get("station_id")})
     service_ids = list({b["service_id"] for b in bookings if b.get("service_id")})
 
-    # fetch all stations at once
     stations = {}
-    for sid in station_ids:
-        doc = db.collection("stations").document(sid).get()
-        if doc.exists:
-            stations[sid] = doc.to_dict()
-
-    # fetch all services at once
     services = {}
-    for sid in service_ids:
-        doc = db.collection("services").document(sid).get()
-        if doc.exists:
-            services[sid] = doc.to_dict()
 
-    # enrich bookings
+    # Bulk fetch all stations in ONE network request
+    if station_ids:
+        station_refs = [db.collection("stations").document(sid) for sid in station_ids]
+        for doc in db.get_all(station_refs):
+            if doc.exists:
+                stations[doc.id] = doc.to_dict()
+
+    # Bulk fetch all services in ONE network request
+    if service_ids:
+        service_refs = [db.collection("services").document(sid) for sid in service_ids]
+        for doc in db.get_all(service_refs):
+            if doc.exists:
+                services[doc.id] = doc.to_dict()
+
+    # Enrich bookings (in-memory, instant)
     for b in bookings:
         station = stations.get(b.get("station_id"), {})
         service = services.get(b.get("service_id"), {})
@@ -143,19 +147,41 @@ async def mark_booking_read(booking_id: str, user_id: str) -> dict:
 
 
 async def get_booked_slots(station_id: str, date: str) -> list[str]:
-    excluded_statuses = {"cancelled", "rejected"}
-    docs = db.collection("bookings") \
-        .where("station_id", "==", station_id) \
-        .where("travel_date", "==", date) \
+    """
+    OPTIMIZED: Excludes cancelled/rejected bookings at the DB query level
+    using 'not-in' filter instead of downloading them and filtering in Python.
+    """
+    docs = (
+        db.collection("bookings")
+        .where("station_id", "==", station_id)
+        .where("travel_date", "==", date)
+        .where("status", "not-in", ["cancelled", "rejected"])
         .stream()
-    
+    )
+
     slots = []
     for doc in docs:
-        data = doc.to_dict()
-        if data.get("status") in excluded_statuses:
-            continue
-        time = data.get("travel_time")
+        time = doc.to_dict().get("travel_time")
         if time:
             slots.append(time)
-    
+
     return slots
+
+
+async def get_unread_count(user_id: str) -> dict:
+    """
+    Lightweight query: returns only the count of bookings that have a
+    non-pending status and have not been read by the customer.
+    Used by the notification badge — avoids fetching full enriched bookings.
+    """
+    docs = (
+        db.collection("bookings")
+        .where("user_id", "==", user_id)
+        .where("customer_read", "==", False)
+        .stream()
+    )
+    count = sum(
+        1 for doc in docs
+        if doc.to_dict().get("status") != "pending"
+    )
+    return {"count": count}

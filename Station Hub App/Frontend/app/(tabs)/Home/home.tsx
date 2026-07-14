@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   ActivityIndicator,
+  FlatList,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -18,6 +19,8 @@ import Bottomnav from "@/components/Bottomnav";
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 import { useUser } from "../../../context/userContext";
+import { apiFetch } from "../../../src/api";
+
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -30,41 +33,61 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [userCity, setUserCity] = useState("Your Location");
 
-  useEffect(() => {
-    const fetchStations = async () => {
-      setLoadingStations(true);
-      setStationsError("");
-      try {
-        const res = await fetch(`${API_BASE}/stations/public`);
-        const data = await res.json();
-        if (res.ok) {
+  const limit = 10;
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+
+  const fetchStations = async (currentOffset = 0) => {
+    if (currentOffset === 0) setLoadingStations(true);
+    setStationsError("");
+    try {
+      const res = await apiFetch(`${API_BASE}/stations/public?limit=${limit}&offset=${currentOffset}`);
+      const data = await res.json();
+      if (res.ok) {
+        if (currentOffset === 0) {
           setStations(data.stations || []);
         } else {
-          setStationsError(data.detail || "Failed to load stations");
+          setStations((prev) => [...prev, ...(data.stations || [])]);
         }
-      } catch (e) {
-        setStationsError("Cannot connect to server");
-      } finally {
-        setLoadingStations(false);
+        if ((data.stations || []).length < limit) {
+          setHasMore(false);
+        } else {
+          setHasMore(true);
+        }
+      } else {
+        setStationsError(data.detail || "Failed to load stations");
       }
-    };
-    fetchStations();
+    } catch (e) {
+      setStationsError("Cannot connect to server");
+    } finally {
+      setLoadingStations(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStations(0);
   }, []);
+
+  const loadMore = () => {
+    if (!loadingStations && hasMore) {
+      const nextOffset = offset + limit;
+      setOffset(nextOffset);
+      fetchStations(nextOffset);
+    }
+  };
 
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
         const token = await AsyncStorage.getItem("token");
         if (!token) return;
-        const res = await fetch(`${API_BASE}/bookings/`, {
+        // OPTIMIZED: single lightweight count query instead of fetching all bookings
+        const res = await apiFetch(`${API_BASE}/bookings/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
         if (res.ok) {
-          const unread = (data.bookings || []).filter(
-            (b: any) => b.status !== "pending" && !b.customer_read,
-          );
-          setUnreadCount(unread.length);
+          setUnreadCount(data.count ?? 0);
         }
       } catch (e) {
         // silently ignore — badge just won't show
@@ -104,10 +127,17 @@ export default function HomeScreen() {
   }, [stations, sortBy]);
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView
+      <FlatList
+        data={sortedStations}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 120 }}
-      >
+        onEndReached={loadMore}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={loadingStations && offset > 0 ? <ActivityIndicator size="small" color="#FF7A45" style={{ marginVertical: 20 }} /> : null}
+        ListEmptyComponent={loadingStations && offset === 0 ? <ActivityIndicator size="large" color="#FF7A45" style={{ marginVertical: 40 }} /> : null}
+        ListHeaderComponent={
+          <>
         {/* HEADER */}
         <View style={styles.header}>
           <View style={styles.userSection}>
@@ -220,62 +250,65 @@ source={user?.profile_image ? { uri: user.profile_image } : require("../../../as
             </TouchableOpacity>
           ))}
         </ScrollView>
+        </>
+      }
+      renderItem={({ item: station }) => {
+        const locationLabel = [station.address, station.city]
+          .filter(Boolean)
+          .join(", ");
+        return (
+          <TouchableOpacity
+            style={styles.serviceCard}
+            onPress={() =>
+              router.push({
+                pathname: "/(tabs)/Home/stationdetail",
+                params: { 
+                  station_id: station.id,
+                  station_data: JSON.stringify(station)
+                },
+              })
+            }
+          >
+            {station.image_url ? (
+              <Image
+                source={{ uri: station.image_url }}
+                style={styles.serviceImage}
+              />
+            ) : (
+              <Image
+                source={require("../../../assets/images/service1.png")}
+                style={styles.serviceImage}
+              />
+            )}
 
-        {!loadingStations &&
-          sortedStations.map((station) => {
-            const locationLabel = [station.address, station.city]
-              .filter(Boolean)
-              .join(", ");
-            return (
-              <TouchableOpacity
-                key={station.id}
-                style={styles.serviceCard}
-                onPress={() =>
-                  router.push({
-                    pathname: "/(tabs)/Home/stationdetail",
-                    params: { station_id: station.id },
-                  })
-                }
-              >
-                {station.image_url ? (
-                  <Image
-source={station.image_url ? { uri: station.image_url } : require("../../../assets/images/riverside.png")}                    style={styles.serviceImage}
-                  />
-                ) : (
-                  <Image
-                    source={require("../../../assets/images/service1.png")}
-                    style={styles.serviceImage}
-                  />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.serviceTitle}>{station.name}</Text>
+              {locationLabel ? (
+                <Text style={styles.serviceLocation}>{locationLabel}</Text>
+              ) : null}
+              <View style={styles.ratingRow}>
+                <Text style={styles.ratingText}>
+                  {station.avg_rating > 0
+                    ? station.avg_rating.toFixed(1)
+                    : "New"}
+                </Text>
+                {station.avg_rating > 0 && (
+                  <Text style={styles.ratingStar}>★</Text>
                 )}
+                {station.rating_count > 0 && (
+                  <Text style={styles.ratingCountText}>
+                    {" "}
+                    ({station.rating_count})
+                  </Text>
+                )}
+              </View>
+            </View>
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.serviceTitle}>{station.name}</Text>
-                  {locationLabel ? (
-                    <Text style={styles.serviceLocation}>{locationLabel}</Text>
-                  ) : null}
-                  <View style={styles.ratingRow}>
-                    <Text style={styles.ratingText}>
-                      {station.avg_rating > 0
-                        ? station.avg_rating.toFixed(1)
-                        : "New"}
-                    </Text>
-                    {station.avg_rating > 0 && (
-                      <Text style={styles.ratingStar}>★</Text>
-                    )}
-                    {station.rating_count > 0 && (
-                      <Text style={styles.ratingCountText}>
-                        {" "}
-                        ({station.rating_count})
-                      </Text>
-                    )}
-                  </View>
-                </View>
-
-                <Ionicons name="chevron-forward" size={18} color="#ccc" />
-              </TouchableOpacity>
-            );
-          })}
-      </ScrollView>
+            <Ionicons name="chevron-forward" size={18} color="#ccc" />
+          </TouchableOpacity>
+        );
+      }}
+      />
 
       <Bottomnav />
     </SafeAreaView>

@@ -16,6 +16,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../../src/api";
+
 
 export default function ChangePasswordScreen() {
   const router = useRouter();
@@ -45,7 +47,7 @@ export default function ChangePasswordScreen() {
     setSaving(true);
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/auth/change-password`, {
+      const res = await apiFetch(`${API_BASE}/auth/change-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

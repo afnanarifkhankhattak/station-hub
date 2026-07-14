@@ -42,3 +42,7 @@ class UpdateProfileRequest(BaseModel):
     full_name: str
     phone: str | None = None
     profile_image: str | None = None
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str

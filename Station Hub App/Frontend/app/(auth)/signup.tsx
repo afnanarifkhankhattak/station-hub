@@ -16,6 +16,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../src/config";
+import { apiFetch } from "../../src/api";
+
 
 export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
@@ -59,7 +61,7 @@ const showError = (message: string) => {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/register`, {
+      const response = await apiFetch(`${API_BASE}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -72,6 +74,7 @@ const showError = (message: string) => {
       const data = await response.json();
       if (response.ok) {
         await AsyncStorage.setItem("token", data.token);
+        await AsyncStorage.setItem("refresh_token", data.refresh_token);
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
         showToast("Account Created Successfully!");
       } else {

@@ -20,8 +20,9 @@ async def get_dashboard_stats(user_id: str) -> dict:
     else:
         bookings_docs = []
 
-    # ── Fetch all users (for count) ────────────────────────
-    users_docs = list(db.collection("users").stream())
+    # ── Count all users via aggregation (no full scan!) ───
+    count_result = db.collection("users").count().get()
+    total_users = count_result[0][0].value if count_result else 0
 
     bookings = [{"id": d.id, **d.to_dict()} for d in bookings_docs]
     today = datetime.utcnow().strftime("%Y-%m-%d")
@@ -29,10 +30,30 @@ async def get_dashboard_stats(user_id: str) -> dict:
     # ── Stats ──────────────────────────────────────────────
     total_bookings = len(bookings)
     total_stations = len(stations_docs)
-    total_users    = len(users_docs)
 
+    # ── BULK-FETCH: collect unique user & service IDs ──────
+    unique_user_ids    = list({b["user_id"]    for b in bookings if b.get("user_id")})
+    unique_service_ids = list({b["service_id"] for b in bookings if b.get("service_id")})
+
+    # Bulk fetch users in ONE network request
+    user_cache: dict = {}
+    if unique_user_ids:
+        user_refs = [db.collection("users").document(uid) for uid in unique_user_ids]
+        for doc in db.get_all(user_refs):
+            if doc.exists:
+                user_cache[doc.id] = doc.to_dict()
+
+    # Bulk fetch services in ONE network request
+    service_cache: dict = {}
+    if unique_service_ids:
+        svc_refs = [db.collection("services").document(sid) for sid in unique_service_ids]
+        for doc in db.get_all(svc_refs):
+            if doc.exists:
+                service_cache[doc.id] = doc.to_dict()
+
+    # ── Today's earnings (using cached service data) ───────
     todays_earnings = sum(
-        _get_price(b)
+        _get_price_from_cache(b, service_cache)
         for b in bookings
         if b.get("status") == "completed"
         and str(b.get("travel_date", "")).startswith(today)
@@ -40,13 +61,13 @@ async def get_dashboard_stats(user_id: str) -> dict:
 
     # ── Pending bookings ───────────────────────────────────
     pending_bookings = [
-        _fmt(b, station_names) for b in bookings
+        _fmt(b, station_names, user_cache, service_cache) for b in bookings
         if b.get("status") == "pending"
     ]
 
     # ── Confirmed bookings ─────────────────────────────────
     confirmed_bookings = [
-        _fmt(b, station_names) for b in bookings
+        _fmt(b, station_names, user_cache, service_cache) for b in bookings
         if b.get("status") == "confirmed"
     ]
 
@@ -56,7 +77,7 @@ async def get_dashboard_stats(user_id: str) -> dict:
         key=lambda b: b.get("created_at", ""),
         reverse=True
     )
-    recent_bookings = [_fmt(b, station_names) for b in sorted_bookings[:10]]
+    recent_bookings = [_fmt(b, station_names, user_cache, service_cache) for b in sorted_bookings[:10]]
 
     return {
         "stats": {
@@ -117,38 +138,37 @@ async def update_booking_status(booking_id: str, status: str) -> dict:
     return {"message": f"Booking marked as {status}", "booking_id": booking_id}
 
 
-def _get_price(b: dict) -> float:
+# ── OPTIMIZED: accepts pre-fetched service cache ────────────
+def _get_price_from_cache(b: dict, service_cache: dict) -> float:
+    """Returns the price using the pre-fetched service_cache dict (zero extra DB calls)."""
     service_id = b.get("service_id")
     tier = b.get("tier")
     if not service_id or not tier:
         return 0.0
-    service_doc = db.collection("services").document(service_id).get()
-    if not service_doc.exists:
+    service_data = service_cache.get(service_id)
+    if not service_data:
         return 0.0
-    tiers = service_doc.to_dict().get("tiers", {})
+    tiers = service_data.get("tiers", {})
     tier_data = tiers.get(tier)
     if not tier_data:
         return 0.0
     return float(tier_data.get("price", 0) or 0)
 
 
-def _fmt(b: dict, station_names: dict) -> dict:
-    user_name = "Unknown"
-    user_profile_image = ""
+# ── OPTIMIZED: accepts pre-fetched lookup dicts ─────────────
+def _fmt(b: dict, station_names: dict, user_cache: dict, service_cache: dict) -> dict:
+    """
+    OPTIMIZED: No Firestore reads inside this function.
+    All user/service data comes from pre-fetched bulk dicts passed in.
+    """
     user_id = b.get("user_id")
-    if user_id:
-        user_doc = db.collection("users").document(user_id).get()
-        if user_doc.exists:
-            user_data = user_doc.to_dict()
-            user_name = user_data.get("full_name", "Unknown")
-            user_profile_image = user_data.get("profile_image", "")
+    user_data = user_cache.get(user_id, {}) if user_id else {}
+    user_name = user_data.get("full_name", "Unknown")
+    user_profile_image = user_data.get("profile_image", "")
 
-    service_name = ""
     service_id = b.get("service_id")
-    if service_id:
-        service_doc = db.collection("services").document(service_id).get()
-        if service_doc.exists:
-            service_name = service_doc.to_dict().get("name", "")
+    service_data = service_cache.get(service_id, {}) if service_id else {}
+    service_name = service_data.get("name", "")
 
     return {
         "id":             b.get("id", ""),
@@ -164,7 +184,7 @@ def _fmt(b: dict, station_names: dict) -> dict:
         "vehicle_brand":  b.get("vehicle_brand", ""),
         "vehicle_number": b.get("vehicle_number", ""),
         "special_request": b.get("special_request", ""),
-        "price":          _get_price(b),
+        "price":          _get_price_from_cache(b, service_cache),
         "status":         b.get("status", ""),
         "created_at":     b.get("created_at", ""),
     }

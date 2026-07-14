@@ -15,6 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../../src/api";
+
 
 const TAB_STATUS_MAP: Record<string, string[]> = {
   upcoming: ["pending", "confirmed"],
@@ -56,7 +58,7 @@ export default function BookingHistoryScreen() {
         }
 
         // fetch fresh in background
-        const res = await fetch(`${API_BASE}/bookings/`, {
+        const res = await apiFetch(`${API_BASE}/bookings/`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const data = await res.json();
@@ -94,7 +96,7 @@ export default function BookingHistoryScreen() {
         onPress: async () => {
           try {
             const token = await AsyncStorage.getItem("token");
-            const res = await fetch(`${API_BASE}/bookings/${bookingId}`, {
+            const res = await apiFetch(`${API_BASE}/bookings/${bookingId}`, {
               method: "DELETE",
               headers: { Authorization: `Bearer ${token}` },
             });

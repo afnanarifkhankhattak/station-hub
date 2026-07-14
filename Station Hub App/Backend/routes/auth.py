@@ -9,6 +9,7 @@ from schemas.auth_schemas import (
     ResetPasswordRequest,
     ChangePasswordRequest,
     UpdateProfileRequest,
+    RefreshTokenRequest,
 )
 import services.auth_service as auth_service
 
@@ -58,3 +59,8 @@ async def update_me(body: UpdateProfileRequest, current_user: dict = Depends(get
 @router.post("/google")
 async def google_login(body: GoogleLoginRequest):
     return await auth_service.google_login(body.id_token)
+
+
+@router.post("/refresh")
+async def refresh_token(body: RefreshTokenRequest):
+    return await auth_service.refresh_access_token(body.refresh_token)

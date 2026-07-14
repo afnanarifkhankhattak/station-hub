@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { API_BASE } from "../../src/config";
+import { apiFetch } from "../../src/api";
+
 
 export default function ResetPassword() {
   const router = useRouter();
@@ -33,7 +35,7 @@ export default function ResetPassword() {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+      const response = await apiFetch(`${API_BASE}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email || phone }),

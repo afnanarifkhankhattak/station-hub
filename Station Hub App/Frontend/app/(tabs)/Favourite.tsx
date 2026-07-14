@@ -17,6 +17,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../src/api";
+
 
 type Tier = { price: number; duration: string };
 type Service = {
@@ -55,7 +57,7 @@ export default function Favorites() {
       }
 
       // fetch fresh in background
-      const res = await fetch(`${API_BASE}/favorites/`, {
+      const res = await apiFetch(`${API_BASE}/favorites/`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -90,7 +92,7 @@ export default function Favorites() {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) return;
-      await fetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
+      await apiFetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` },
       });

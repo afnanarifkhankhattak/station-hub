@@ -19,6 +19,8 @@ import { Ionicons, Feather } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../../context/userContext";
 import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../../src/api";
+
 
 const CLOUDINARY_CLOUD_NAME = "dqlmva24c";
 const CLOUDINARY_UPLOAD_PRESET = "StationHub";
@@ -32,7 +34,7 @@ async function uploadToCloudinary(uri: string) {
   } as any);
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-  const res = await fetch(
+  const res = await apiFetch(
     `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
     { method: "POST", body: formData }
   );
@@ -105,7 +107,7 @@ export default function ManageProfileScreen() {
       }
 
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await apiFetch(`${API_BASE}/auth/me`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

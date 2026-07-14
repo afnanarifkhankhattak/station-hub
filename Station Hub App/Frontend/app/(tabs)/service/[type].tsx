@@ -16,6 +16,8 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../src/api";
+
 
 type Tier = { price: number; duration: string };
 type Service = {
@@ -195,9 +197,9 @@ export default function ServicesScreen() {
 
         // fetch both at the same time
         const [servicesRes, favRes] = await Promise.all([
-          fetch(`${API_BASE}/services/public`),
+          apiFetch(`${API_BASE}/services/public`),
           token
-            ? fetch(`${API_BASE}/favorites/`, {
+            ? apiFetch(`${API_BASE}/favorites/`, {
                 headers: { Authorization: `Bearer ${token}` },
               })
             : Promise.resolve(null),
@@ -253,13 +255,13 @@ export default function ServicesScreen() {
 
     try {
       if (isFavorited) {
-        await fetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
+        await apiFetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });
         showToast("Removed from favorites");
       } else {
-        await fetch(`${API_BASE}/favorites/`, {
+        await apiFetch(`${API_BASE}/favorites/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

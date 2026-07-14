@@ -1,8 +1,9 @@
+# pyrefly: ignore [missing-import]
 from fastapi import APIRouter, Depends
 from middleware.auth_middleware import get_current_user
 from schemas.booking_schemas import BookingRequest
 import services.booking_service as booking_service
-from services.booking_service import get_booked_slots
+from services.booking_service import get_booked_slots, get_unread_count
 
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
 
@@ -10,6 +11,11 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
 @router.post("/")
 async def create_booking(body: BookingRequest, current_user: dict = Depends(get_current_user)):
     return await booking_service.create_booking(body, current_user["sub"])
+
+
+@router.get("/unread-count")  # ← MUST be before /{booking_id}
+async def unread_count(current_user: dict = Depends(get_current_user)):
+    return await get_unread_count(current_user["sub"])
 
 
 @router.get("/slots")  # ← MUST be before /{booking_id}

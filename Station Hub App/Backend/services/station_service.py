@@ -13,26 +13,82 @@ async def get_all_stations() -> dict:
         stations.append(data)
     return {"stations": stations}
 
-async def get_public_stations() -> dict:
-    docs = db.collection("stations").where("status", "==", "Active").stream()
+
+async def get_public_stations(limit: int = 20, offset: int = 0) -> dict:
+    """
+    OPTIMIZED: Uses Firestore-native limit + offset so only the requested page
+    is downloaded — NOT the entire collection.
+
+    NOTE: We do NOT use order_by here because combining where() + order_by()
+    on different fields requires a composite Firestore index. Instead, we omit
+    order_by and let the frontend handle sort (it already has sort buttons).
+    The count() is done on a separate simple-filter query which uses the
+    auto-created single-field index — no manual composite index needed.
+    """
+    base_filter = (
+        db.collection("stations")
+        .where("status", "==", "Active")
+    )
+
+    # Lightweight count — simple where() uses auto single-field index
+    count_result = base_filter.count().get()
+    total = count_result[0][0].value if count_result else 0
+
+    # Fetch only the requested page — no order_by so no composite index needed
+    docs = base_filter.limit(limit).offset(offset).stream()
+
     stations = []
     for doc in docs:
         data = doc.to_dict()
         data["id"] = doc.id
         stations.append(data)
-    stations.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    return {"stations": stations}
+
+    return {"stations": stations, "total": total}
 
 
-async def search_stations(q: str) -> dict:
-    docs = db.collection("stations").stream()
+async def public_search_stations(q: str) -> dict:
+    """
+    OPTIMIZED: Caps the collection scan at 200 docs and returns
+    at most 30 matches. Firestore doesn't support arbitrary substring
+    search natively so Python-side filtering is still needed, but the
+    scan is now bounded.
+    """
+    docs = (
+        db.collection("stations")
+        .where("status", "==", "Active")
+        .limit(200)   # bound the worst-case scan
+        .stream()
+    )
     results = []
+    q_lower = q.lower()
     for doc in docs:
         data = doc.to_dict()
         data["id"] = doc.id
         name = data.get("name", "").lower()
-        if q.lower() in name:
+        if q_lower in name:
             results.append(data)
+            if len(results) >= 30:   # return at most 30 matches
+                break
+    return {"stations": results}
+
+
+async def search_stations(q: str) -> dict:
+    """OPTIMIZED: Same bounded scan as public_search_stations."""
+    docs = (
+        db.collection("stations")
+        .limit(200)
+        .stream()
+    )
+    results = []
+    q_lower = q.lower()
+    for doc in docs:
+        data = doc.to_dict()
+        data["id"] = doc.id
+        name = data.get("name", "").lower()
+        if q_lower in name:
+            results.append(data)
+            if len(results) >= 30:
+                break
     return {"stations": results}
 
 
@@ -50,6 +106,7 @@ async def add_station(body) -> dict:
     data["created_at"] = datetime.utcnow().isoformat()
     doc_ref = db.collection("stations").add(data)
     return {"message": "Station added", "id": doc_ref[1].id}
+
 
 async def rate_station(station_id: str, user_id: str, rating: int) -> dict:
     if rating < 1 or rating > 5:

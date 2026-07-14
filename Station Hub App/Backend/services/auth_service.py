@@ -13,7 +13,7 @@ from schemas.auth_schemas import (
     ChangePasswordRequest,
     UpdateProfileRequest,
 )
-from utils.jwt_handler import create_access_token
+from utils.jwt_handler import create_access_token, create_refresh_token, verify_token
 from utils.password_handler import hash_password, verify_password
 from utils.email_handler import generate_otp, send_otp_email
 
@@ -35,10 +35,12 @@ async def register_user(body: RegisterRequest) -> dict:
     user_id = doc_ref[1].id
 
     token = create_access_token({"sub": user_id, "email": body.email})
+    refresh_token = create_refresh_token({"sub": user_id, "email": body.email})
 
     return {
         "message": "Registration successful",
         "token": token,
+        "refresh_token": refresh_token,
         "user": {
             "id": user_id,
             "full_name": body.full_name,
@@ -62,10 +64,12 @@ async def login_user(body: LoginRequest) -> dict:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
 
     token = create_access_token({"sub": user_doc.id, "email": user["email"]})
+    refresh_token = create_refresh_token({"sub": user_doc.id, "email": user["email"]})
 
     return {
         "message": "Login successful",
         "token": token,
+        "refresh_token": refresh_token,
         "user": {
             "id": user_doc.id,
             "full_name": user["full_name"],
@@ -190,10 +194,12 @@ async def google_login(id_token: str) -> dict:
         user_id = doc_ref[1].id
 
     token = create_access_token({"sub": user_id, "email": email})
+    refresh_token = create_refresh_token({"sub": user_id, "email": email})
 
     return {
         "message": "Login successful",
         "token": token,
+        "refresh_token": refresh_token,
         "user": {
             "id": user_id,
             "full_name": full_name,
@@ -246,4 +252,27 @@ async def update_current_user_profile(body: UpdateProfileRequest, user_id: str) 
             "id": user_id,
             **user,
         },
+    }
+
+# ─── Refresh Token ──────────────────────────────────────────
+async def refresh_access_token(refresh_token: str) -> dict:
+    payload = verify_token(refresh_token, token_type="refresh")
+    if not payload or payload.get("type") != "refresh":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
+    
+    user_id = payload.get("sub")
+    email = payload.get("email")
+    if not user_id or not email:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+    
+    docs = db.collection("users").document(user_id).get()
+    if not docs.exists:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+
+    new_token = create_access_token({"sub": user_id, "email": email})
+    new_refresh_token = create_refresh_token({"sub": user_id, "email": email})
+
+    return {
+        "token": new_token,
+        "refresh_token": new_refresh_token
     }

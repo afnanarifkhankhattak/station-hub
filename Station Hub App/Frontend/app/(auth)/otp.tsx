@@ -12,6 +12,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { API_BASE } from "../../src/config";
+import { apiFetch } from "../../src/api";
+
 
 export default function VerifyOTP() {
   const router = useRouter();
@@ -47,7 +49,7 @@ export default function VerifyOTP() {
     }
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/auth/verify-otp`, {
+      const response = await apiFetch(`${API_BASE}/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, otp: otpCode }),
@@ -67,7 +69,7 @@ export default function VerifyOTP() {
 
   const handleResend = async () => {
     try {
-      await fetch(`${API_BASE}/auth/forgot-password`, {
+      await apiFetch(`${API_BASE}/auth/forgot-password`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

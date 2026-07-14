@@ -18,6 +18,8 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { apiFetch } from "../../../src/api";
+
 
 const { width } = Dimensions.get("window");
 
@@ -34,9 +36,13 @@ const getServiceIcon = (name: string): any => {
   return "sparkles-outline";
 };
 
-// Pulls a single flat price/duration out of a service, regardless of
-// whether the backend still stores it under tiers.base / tiers.premium.
 const getServicePricing = (service: any): { price: number; duration: string } | null => {
+  // If categories are present, pick the base price of the first category as a representative display price
+  if (service?.categories && Object.keys(service.categories).length > 0) {
+    const firstCat = Object.values(service.categories)[0] as any;
+    if (firstCat?.base) return firstCat.base;
+    if (firstCat?.premium) return firstCat.premium;
+  }
   if (service?.tiers?.base) return service.tiers.base;
   if (service?.tiers?.premium) return service.tiers.premium;
   if (service?.price != null) return { price: service.price, duration: service.duration };
@@ -46,17 +52,19 @@ const getServicePricing = (service: any): { price: number; duration: string } | 
 export default function StationDetail() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { station_id } = useLocalSearchParams<{ station_id: string }>();
+  const { station_id, station_data } = useLocalSearchParams<{ station_id: string; station_data?: string }>();
 
-  const [station, setStation] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const initialStation = station_data ? JSON.parse(station_data) : null;
+  const [station, setStation] = useState<any>(initialStation);
+  const [loading, setLoading] = useState(!initialStation);
+  const [loadingServices, setLoadingServices] = useState(true);
   const [error, setError] = useState("");
 
   const [services, setServices] = useState<any[]>([]);
 
   const [userRating, setUserRating] = useState<number>(0);
-  const [avgRating, setAvgRating] = useState<number>(0);
-  const [ratingCount, setRatingCount] = useState<number>(0);
+  const [avgRating, setAvgRating] = useState<number>(initialStation?.avg_rating || 0);
+  const [ratingCount, setRatingCount] = useState<number>(initialStation?.rating_count || 0);
   const [selectedRating, setSelectedRating] = useState<number>(0);
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingMsg, setRatingMsg] = useState("");
@@ -66,13 +74,14 @@ export default function StationDetail() {
     if (!station_id) return;
 
     const fetchStation = async () => {
-      setLoading(true);
+      if (!initialStation) setLoading(true);
+      setLoadingServices(true);
       setError("");
       try {
         // fetch both at the same time
         const [stationRes, servicesRes] = await Promise.all([
-          fetch(`${API_BASE}/stations/public/${station_id}`),
-          fetch(`${API_BASE}/services/public/station/${station_id}`),
+          apiFetch(`${API_BASE}/stations/public/${station_id}`),
+          apiFetch(`${API_BASE}/services/public/station/${station_id}`),
         ]);
 
         const stationData = await stationRes.json();
@@ -103,9 +112,10 @@ export default function StationDetail() {
           setServices(servicesData.services || []);
         }
       } catch (e) {
-        setError("Cannot connect to server");
+        if (!initialStation) setError("Cannot connect to server");
       } finally {
         setLoading(false);
+        setLoadingServices(false);
       }
     };
 
@@ -154,7 +164,7 @@ export default function StationDetail() {
     setRatingMsg("");
     try {
       const token = await AsyncStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/stations/${station_id}/rate`, {
+      const res = await apiFetch(`${API_BASE}/stations/${station_id}/rate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -253,7 +263,9 @@ export default function StationDetail() {
           {/* OFFERED SERVICES — display-only grid, no tiers, not clickable */}
           <Text style={styles.offeredHeading}>Offered Services:</Text>
 
-          {services.length === 0 ? (
+          {loadingServices ? (
+            <ActivityIndicator size="small" color="#F97316" style={{ marginVertical: 20 }} />
+          ) : services.length === 0 ? (
             <Text style={styles.noServicesText}>
               No services available at this station yet.
             </Text>
