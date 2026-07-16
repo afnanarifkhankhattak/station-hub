@@ -8,7 +8,9 @@ import { apiFetch } from "./api";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    // Foreground updates are rendered by BookingEventsProvider so users get
+    // one accessible, actionable notification instead of duplicate alerts.
+    shouldShowAlert: false,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),

@@ -37,9 +37,9 @@ const FAQ_DATA = [
   },
   {
     id: "3",
-    question: "How do I save a service to my favorites?",
+    question: "Where can I find my bookings?",
     answer:
-      "Tap the heart icon on any service card. It will instantly appear in your Favorites tab, and you can remove it the same way at any time.",
+      "Open the MY Booking tab in the bottom navigation to see your upcoming, completed, cancelled, and rejected bookings.",
   },
   {
     id: "4",

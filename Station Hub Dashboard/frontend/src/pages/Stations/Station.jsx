@@ -790,12 +790,25 @@ const StationServicesPanel = ({ stationId, D }) => {
             );
             if (svcSnap.empty) return null;
             const svc = svcSnap.docs[0].data();
+
+            // Resolve price: try categories first (new shape), then top-level price (legacy)
+            let price = null;
+            const cats = svc.categories || {};
+            const catKeys = Object.keys(cats);
+            if (catKeys.length > 0) {
+              // Show the first category's price as representative
+              const firstCat = cats[catKeys[0]];
+              price = firstCat?.price ?? null;
+            } else if (svc.price != null) {
+              price = svc.price;
+            }
+
             return {
               statusDocId: statusDoc.id,
               serviceId,
               isAvailable,
               name: svc.name,
-              price: svc.price,
+              price,
             };
           } catch {
             return null;

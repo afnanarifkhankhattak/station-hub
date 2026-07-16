@@ -16,6 +16,8 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
 import { apiFetch } from "../../../../src/api";
+import { useBookingEvents } from "../../../../context/bookingEventsContext";
+import Bottomnav from "@/components/Bottomnav";
 
 
 const TAB_STATUS_MAP: Record<string, string[]> = {
@@ -37,6 +39,7 @@ const STATUS_STYLES: Record<
 
 export default function BookingHistoryScreen() {
   const router = useRouter();
+  const { latestEvent } = useBookingEvents();
   const [activeTab, setActiveTab] = useState("upcoming");
 
   const [bookings, setBookings] = useState<any[]>([]);
@@ -82,6 +85,19 @@ export default function BookingHistoryScreen() {
 
     fetchBookings();
   }, []);
+
+  useEffect(() => {
+    if (!latestEvent) return;
+    setBookings((previous) => {
+      const updated = previous.map((booking) =>
+        booking.id === latestEvent.booking_id
+          ? { ...booking, status: latestEvent.new_status }
+          : booking,
+      );
+      AsyncStorage.setItem("cached_bookings", JSON.stringify(updated));
+      return updated;
+    });
+  }, [latestEvent]);
 
   const filteredData = bookings.filter((item) =>
     (TAB_STATUS_MAP[activeTab] || []).includes(item.status),
@@ -282,6 +298,7 @@ export default function BookingHistoryScreen() {
           })
         )}
       </ScrollView>
+      <Bottomnav />
     </SafeAreaView>
   );
 }

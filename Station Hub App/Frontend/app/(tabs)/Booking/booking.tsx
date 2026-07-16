@@ -46,22 +46,17 @@ type Station = {
   longitude?: number;
 };
 
-type Tier = { price: number; duration: string };
+type CategoryPrice = { price: number };
 
 type Service = {
   id: string;
   name: string;
   description?: string;
   image_url?: string;
-  tiers?: { base?: Tier; premium?: Tier };
-  categories?: Record<string, { base?: Tier; premium?: Tier }>;
+  categories?: Record<string, CategoryPrice>;
 };
 
-/* Business rules for price adjustment that the API does not (yet) expose.
-   NOTE: these are UI-side defaults, not hardcoded station/service data —
-   every price still originates from the fetched service tier. Once the
-   backend exposes a per-vehicle-type price and/or a live discount field,
-   swap these constants for the API values. */
+/* Business rules for price adjustment that the API does not (yet) expose. */
 type DateItem = {
   day: string;
   num: string;
@@ -173,7 +168,6 @@ export default function BookingScreen() {
 
   const params = useLocalSearchParams<{
     service_id?: string;
-    tier?: string;
     station_ids?: string;
   }>();
 
@@ -490,12 +484,10 @@ export default function BookingScreen() {
     if (!selectedService) return null;
     
     // If Car and categories exist for the selected category, use it
-    if (vehicleType === "Car" && selectedService.categories && selectedService.categories[carCategory]?.base?.price) {
-      return selectedService.categories[carCategory].base.price;
+    if (vehicleType === "Car" && selectedService.categories?.[carCategory]?.price) {
+      return selectedService.categories[carCategory].price;
     }
-    
-    // Fallback to legacy general tiers
-    return selectedService.tiers?.base?.price ?? null;
+    return null;
   }, [selectedService, vehicleType, carCategory]);
 
   const adjustedPrice = React.useMemo(() => {
@@ -526,11 +518,6 @@ export default function BookingScreen() {
     if (!selectedServiceId) return setSubmitError("Please select a service");
     if (!selectedDate) return setSubmitError("Please select a date");
     if (!selectedTime) return setSubmitError("Please select a time");
-    if (!vehicleBrand.trim())
-      return setSubmitError("Please enter vehicle brand");
-    if (!vehicleNumber.trim())
-      return setSubmitError("Please enter vehicle number");
-
     setSubmitting(true);
     try {
       const token = await AsyncStorage.getItem("token");
@@ -550,11 +537,11 @@ export default function BookingScreen() {
           travel_date: selectedDate,
           travel_time: selectedTime,
           vehicle_type: vehicleType,
+          car_category: vehicleType === "Car" ? carCategory : "",
           vehicle_brand: vehicleBrand.trim(),
           vehicle_number: vehicleNumber.trim(),
           special_request: specialRequest.trim(),
           service_id: selectedServiceId,
-          tier: "base",
         }),
       });
 
@@ -890,7 +877,7 @@ export default function BookingScreen() {
                   { id: "sedan", label: "Sedan" },
                   { id: "hatchback", label: "Hatchback" },
                   { id: "suv", label: "SUV/Crossover" },
-                  { id: "microcar", label: "Microcar" },
+                  { id: "full_suv", label: "Full SUV" },
                   { id: "pickup", label: "Pickup" },
                 ].map(cat => (
                   <TouchableOpacity

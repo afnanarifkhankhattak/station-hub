@@ -5,9 +5,13 @@ from datetime import datetime
 
 
 def get_all_services(user_id: str) -> dict:
-    docs = db.collection("services").where("owner_id", "==", user_id).stream()
+    docs = (
+        db.collection("services")
+        .where("owner_id", "==", user_id)
+        .order_by("created_at", direction="DESCENDING")
+        .stream()
+    )
     services = [{"id": d.id, **d.to_dict()} for d in docs]
-    services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"services": services}
 
 
@@ -28,7 +32,10 @@ def update_service(service_id: str, body: ServiceRequest, user_id: str) -> dict:
         raise HTTPException(status_code=403, detail="Access denied")
     data = body.dict()
     data["updated_at"] = datetime.utcnow().isoformat()
-    doc_ref.update(data)
+    # Replace the document so outdated pricing fields are removed on the next edit.
+    data["owner_id"] = user_id
+    data["created_at"] = doc.to_dict().get("created_at", data["updated_at"])
+    doc_ref.set(data)
     return {"message": "Service updated", "service": {"id": service_id, **data}}
 
 
@@ -43,14 +50,31 @@ def delete_service(service_id: str, user_id: str) -> dict:
     return {"message": "Service deleted"}
 
 def get_public_services() -> dict:
-    docs = db.collection("services").where("status", "==", "Active").stream()
+    docs = (
+        db.collection("services")
+        .where("status", "==", "Active")
+        .order_by("created_at", direction="DESCENDING")
+        .stream()
+    )
     services = [{"id": d.id, **d.to_dict()} for d in docs]
-    services.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"services": services}
 
+
+def get_public_service_by_id(service_id: str) -> dict:
+    doc = db.collection("services").document(service_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Service not found")
+    return {"service": {"id": doc.id, **doc.to_dict()}}
+
+
 def get_services_for_station(station_id: str) -> dict:
-    status_docs = db.collection("serviceStationStatus").where("stationId", "==", station_id).stream()
-    service_ids = list({d.to_dict().get("serviceId") for d in status_docs if d.to_dict().get("isAvailable") is True and d.to_dict().get("serviceId")})
+    status_docs = (
+        db.collection("serviceStationStatus")
+        .where("stationId", "==", station_id)
+        .where("isAvailable", "==", True)
+        .stream()
+    )
+    service_ids = list({d.to_dict().get("serviceId") for d in status_docs if d.to_dict().get("serviceId")})
 
     if not service_ids:
         return {"services": []}

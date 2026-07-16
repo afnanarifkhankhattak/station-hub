@@ -7,8 +7,9 @@ class BookingRequest(BaseModel):
     travel_date: str
     travel_time: str
     vehicle_type: str
-    vehicle_brand: str
-    vehicle_number: str
+    vehicle_brand: Optional[str] = ""
+    vehicle_number: Optional[str] = ""
     special_request: Optional[str] = ""
     service_id: Optional[str] = None
     tier: Optional[str] = None
+    car_category: Optional[str] = None

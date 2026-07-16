@@ -111,7 +111,7 @@ export default function PrivacyPolicyScreen() {
             We collect information you provide directly, such as your name, email address,
             phone number, and profile picture when you create an account. We also collect
             information generated through your use of the app, including booking history,
-            favorited services, vehicle details, and your approximate location when you
+            vehicle details, and your approximate location when you
             choose to share it, so we can show you nearby stations and accurate service
             availability.{"\n\n"}
             Your information is used to create and manage your account, process bookings,
@@ -306,4 +306,3 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
 });
-

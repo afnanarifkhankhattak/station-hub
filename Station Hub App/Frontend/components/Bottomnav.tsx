@@ -12,7 +12,7 @@ export default function BottomNav() {
   const tabs = [
     { label: "Home", icon: "home", key: "Home", route: "/Home/home" },
     { label: "Booking", icon: "calendar", key: "Booking", route: "/Booking/booking" },
-    { label: "Favorite", icon: "heart", key: "Favourite", route: "/Favourite" },
+    { label: "MY Booking", icon: "clipboard", key: "bookingHistory", route: "/profile/bookingHistory/bookinghistory" },
     { label: "Services", icon: "construct", key: "service", route: "/service/index" },
     { label: "Profile", icon: "person", key: "profile", route: "/profile" },
   ];

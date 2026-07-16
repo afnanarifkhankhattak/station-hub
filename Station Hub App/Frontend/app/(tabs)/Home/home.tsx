@@ -34,69 +34,70 @@ export default function HomeScreen() {
   const [userCity, setUserCity] = useState("Your Location");
 
   const limit = 10;
-  const [offset, setOffset] = useState(0);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(true);
 
-  const fetchStations = async (currentOffset = 0) => {
-    if (currentOffset === 0) setLoadingStations(true);
-    setStationsError("");
-    try {
-      const res = await apiFetch(`${API_BASE}/stations/public?limit=${limit}&offset=${currentOffset}`);
-      const data = await res.json();
-      if (res.ok) {
-        if (currentOffset === 0) {
-          setStations(data.stations || []);
-        } else {
-          setStations((prev) => [...prev, ...(data.stations || [])]);
-        }
-        if ((data.stations || []).length < limit) {
-          setHasMore(false);
-        } else {
-          setHasMore(true);
-        }
+const fetchStations = async (cursor: string | null = null) => {
+  if (!cursor) {
+    setLoadingStations(true);
+    const cached = await AsyncStorage.getItem("home_stations");
+    if (cached) setStations(JSON.parse(cached));
+  }
+  setStationsError("");
+  try {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (cursor) query.set("cursor", cursor);
+
+    const res = await apiFetch(`${API_BASE}/stations/public?${query.toString()}`);
+    const data = await res.json();
+    if (res.ok) {
+      const fetchedStations = data.stations || [];
+      if (!cursor) {
+        setStations(fetchedStations);
+        AsyncStorage.setItem("home_stations", JSON.stringify(fetchedStations));
       } else {
-        setStationsError(data.detail || "Failed to load stations");
+        setStations((prev) => [...prev, ...fetchedStations]);
       }
-    } catch (e) {
-      setStationsError("Cannot connect to server");
-    } finally {
-      setLoadingStations(false);
+      setNextCursor(data.next_cursor || null);
+      setHasMore(Boolean(data.next_cursor));
+    } else {
+      setStationsError(data.detail || "Failed to load stations");
     }
-  };
+  } catch (e) {
+    setStationsError("Cannot connect to server");
+  } finally {
+    setLoadingStations(false);
+  }
+};
 
   useEffect(() => {
-    fetchStations(0);
+    fetchStations(null);
   }, []);
 
   const loadMore = () => {
-    if (!loadingStations && hasMore) {
-      const nextOffset = offset + limit;
-      setOffset(nextOffset);
-      fetchStations(nextOffset);
+    if (!loadingStations && hasMore && nextCursor) {
+      fetchStations(nextCursor);
     }
   };
 
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      try {
-        const token = await AsyncStorage.getItem("token");
-        if (!token) return;
-        const res = await apiFetch(`${API_BASE}/bookings/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          const unread = (data.bookings || []).filter(
-            (b: any) => b.status !== "pending" && !b.customer_read,
-          );
-          setUnreadCount(unread.length);
-        }
-      } catch (e) {
-        // silently ignore — badge just won't show
+useEffect(() => {
+  const fetchUnreadCount = async () => {
+    try {
+      const token = await AsyncStorage.getItem("token");
+      if (!token) return;
+      const res = await apiFetch(`${API_BASE}/bookings/unread-count`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setUnreadCount(data.unread_count || 0);
       }
-    };
-    fetchUnreadCount();
-  }, []);
+    } catch (e) {
+      // silently ignore
+    }
+  };
+  fetchUnreadCount();
+}, []);
 
   useEffect(() => {
     const loadCity = async () => {
@@ -152,8 +153,8 @@ const StationSkeleton = () => (
         maxToRenderPerBatch={10}
         windowSize={5}
         removeClippedSubviews={true}
-        ListFooterComponent={loadingStations && offset > 0 ? <ActivityIndicator size="small" color="#FF7A45" style={{ marginVertical: 20 }} /> : null}
-        ListEmptyComponent={loadingStations && offset === 0 ? (
+        ListFooterComponent={loadingStations && nextCursor ? <ActivityIndicator size="small" color="#FF7A45" style={{ marginVertical: 20 }} /> : null}
+        ListEmptyComponent={loadingStations && !nextCursor ? (
           <View>
             <StationSkeleton />
             <StationSkeleton />

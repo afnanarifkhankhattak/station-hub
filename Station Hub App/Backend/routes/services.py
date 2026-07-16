@@ -29,6 +29,10 @@ def delete_service(service_id: str, current_user: dict = Depends(get_current_use
 def get_public_services():
     return service_service.get_public_services()
 
+@router.get("/public/{service_id}")
+def get_public_service(service_id: str):
+    return service_service.get_public_service_by_id(service_id)
+
 @router.get("/public/station/{station_id}")
 def get_services_by_station(station_id: str):
     return service_service.get_services_for_station(station_id)

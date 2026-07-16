@@ -15,10 +15,12 @@ import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 import { apiFetch } from "../../../src/api";
+import { useBookingEvents } from "../../../context/bookingEventsContext";
 
 
 export default function BookingConfirmedScreen() {
   const router = useRouter();
+  const { latestEvent } = useBookingEvents();
 
   const params = useLocalSearchParams<{ booking_id?: string }>();
 
@@ -57,31 +59,23 @@ export default function BookingConfirmedScreen() {
         const bk = data.booking;
         setBooking(bk);
 
-        // fetch station details
-        if (bk.station_id) {
-          const stRes = await apiFetch(`${API_BASE}/stations/${bk.station_id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          });
-          if (stRes.ok) {
-            const stData = await stRes.json();
-            setStation(stData.station);
-          }
+        const [stRes, svcRes] = await Promise.all([
+          bk.station_id
+            ? apiFetch(`${API_BASE}/stations/public/${bk.station_id}`)
+            : Promise.resolve(null),
+          bk.service_id
+            ? apiFetch(`${API_BASE}/services/public/${bk.service_id}`)
+            : Promise.resolve(null),
+        ]);
+
+        if (stRes && stRes.ok) {
+          const stData = await stRes.json();
+          setStation(stData.station);
         }
 
-        // fetch service name (owner-only endpoint, so this may fail for non-owners — handled gracefully)
-        if (bk.service_id) {
-          try {
-            const svcRes = await apiFetch(`${API_BASE}/services/public`);
-            if (svcRes.ok) {
-              const svcData = await svcRes.json();
-              const match = (svcData.services || []).find(
-                (s: any) => s.id === bk.service_id,
-              );
-              if (match) setServiceName(match.name);
-            }
-          } catch {
-            // ignore, non-critical
-          }
+        if (svcRes && svcRes.ok) {
+          const svcData = await svcRes.json();
+          if (svcData.service) setServiceName(svcData.service.name);
         }
       } catch (e) {
         setError("Cannot connect to server");
@@ -91,7 +85,7 @@ export default function BookingConfirmedScreen() {
     };
 
     fetchDetails();
-  }, [params.booking_id]);
+  }, [params.booking_id, latestEvent?.event_id]);
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: styles.container.backgroundColor }}>
@@ -202,7 +196,7 @@ export default function BookingConfirmedScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fffdfb", // base background (Favorites style feel)
+    backgroundColor: "#fffdfb",
   },
 
   header: {
@@ -239,7 +233,7 @@ const styles = StyleSheet.create({
   card: {
     margin: 18,
     padding: 15,
-    backgroundColor: "#fff6f0", // light peach card (Favorites style match)
+    backgroundColor: "#fff6f0",
     borderRadius: 10,
   },
 

@@ -207,7 +207,7 @@ const EMPTY_FORM = {
   rating: "",
   image_url: "",
   station_ids: [],
-  tiers: {}, // ← replaces price/duration. e.g. { base: { price, duration }, premium: { price, duration } }
+  categories: {},
 };
 /////////////////////////////////////////////////////////////////////////////////////////
 
@@ -340,85 +340,8 @@ const ServiceForm = ({
             </select>
           </div>
 
-          {/* PRICING MODEL TABS OR SECTIONS */}
+          {/* CATEGORY PRICING */}
           <div className="col-span-3 mt-2">
-            <h3 className={`text-sm font-semibold mb-3 ${D ? "text-gray-200" : "text-gray-800"}`}>
-              Pricing Models
-            </h3>
-            <p className={`text-xs mb-4 ${D ? "text-gray-400" : "text-gray-500"}`}>
-              Configure either General Tiers (applies to all vehicles) or Car Category specific pricing.
-            </p>
-
-            {/* General Tiers */}
-            <div className={`mb-6 p-4 rounded-xl border ${D ? "border-[#2a2d3e] bg-[#1a1c23]" : "border-gray-200 bg-white"}`}>
-              <label className={`block text-xs font-bold mb-2 ${lbl}`}>
-                General Tiers
-              </label>
-              <div className="flex items-center gap-4 mb-3">
-                {["base", "premium"].map((tier) => (
-                  <label key={`gen-${tier}`} className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!!form.tiers?.[tier]}
-                      onChange={(e) => {
-                        const tiers = { ...form.tiers };
-                        if (e.target.checked) {
-                          tiers[tier] = tiers[tier] || { price: "", duration: "" };
-                        } else {
-                          delete tiers[tier];
-                        }
-                        set("tiers", tiers);
-                      }}
-                      className="accent-orange-500"
-                    />
-                    <span className="text-sm capitalize">{tier}</span>
-                  </label>
-                ))}
-              </div>
-              {/* General Tiers Inputs */}
-              {["base", "premium"].map((tier) =>
-                form.tiers?.[tier] ? (
-                  <div key={`gen-input-${tier}`} className={`grid grid-cols-2 gap-4 mt-3 p-3 rounded-lg border ${D ? "border-[#2a2d3e] bg-[#0f1117]" : "border-gray-100 bg-gray-50"}`}>
-                    <p className={`col-span-2 text-xs font-semibold capitalize ${D ? "text-gray-300" : "text-gray-600"}`}>
-                      {tier} pricing
-                    </p>
-                    <div>
-                      <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>Price (PKR)</label>
-                      <div className="relative">
-                        <span className={`absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium ${D ? "text-gray-600" : "text-gray-400"}`}>PKR</span>
-                        <input
-                          type="number"
-                          value={form.tiers[tier].price}
-                          onChange={(e) => {
-                            const tiers = { ...form.tiers };
-                            tiers[tier] = { ...tiers[tier], price: e.target.value };
-                            set("tiers", tiers);
-                          }}
-                          placeholder="2500"
-                          className={`w-full pl-10 pr-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className={`block text-xs font-medium mb-1.5 ${lbl}`}>Duration</label>
-                      <input
-                        type="text"
-                        value={form.tiers[tier].duration}
-                        onChange={(e) => {
-                          const tiers = { ...form.tiers };
-                          tiers[tier] = { ...tiers[tier], duration: e.target.value };
-                          set("tiers", tiers);
-                        }}
-                        placeholder="e.g. 20–30 mins"
-                        className={`w-full px-3 py-2 text-sm border rounded-xl focus:outline-none transition-all ${inp}`}
-                      />
-                    </div>
-                  </div>
-                ) : null
-              )}
-            </div>
-
-            {/* Car Categories Pricing */}
             <div className={`p-4 rounded-xl border ${D ? "border-[#2a2d3e] bg-[#1a1c23]" : "border-gray-200 bg-white"}`}>
               <label className={`block text-xs font-bold mb-2 ${lbl}`}>
                 Car Categories Pricing
@@ -433,7 +356,7 @@ const ServiceForm = ({
                       onChange={(e) => {
                         const categories = { ...form.categories };
                         if (e.target.checked) {
-                          categories[cat.id] = { base: { price: "", duration: "" } }; 
+                          categories[cat.id] = { price: "" };
                         } else {
                           delete categories[cat.id];
                         }
@@ -445,69 +368,13 @@ const ServiceForm = ({
                     <label htmlFor={`cat-${cat.id}`} className="text-sm font-medium cursor-pointer">{cat.label}</label>
                   </div>
 
-                  {form.categories?.[cat.id] && (
-                    <div className={`ml-6 p-3 rounded-lg border ${D ? "border-[#2a2d3e] bg-[#0f1117]" : "border-gray-100 bg-gray-50"}`}>
-                      <div className="flex items-center gap-4 mb-3">
-                        {["base", "premium"].map((tier) => (
-                          <label key={`${cat.id}-${tier}`} className="flex items-center gap-2 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={!!form.categories[cat.id]?.[tier]}
-                              onChange={(e) => {
-                                const categories = { ...form.categories };
-                                if (e.target.checked) {
-                                  categories[cat.id][tier] = { price: "", duration: "" };
-                                } else {
-                                  delete categories[cat.id][tier];
-                                }
-                                set("categories", categories);
-                              }}
-                              className="accent-blue-500"
-                            />
-                            <span className="text-xs capitalize">{tier}</span>
-                          </label>
-                        ))}
-                      </div>
-
-                      {["base", "premium"].map((tier) =>
-                        form.categories[cat.id]?.[tier] ? (
-                          <div key={`input-${cat.id}-${tier}`} className="grid grid-cols-2 gap-4 mt-2">
-                             <div>
-                              <label className={`block text-[10px] uppercase font-bold mb-1 ${lbl}`}>{tier} Price</label>
-                              <div className="relative">
-                                <span className={`absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-medium ${D ? "text-gray-600" : "text-gray-400"}`}>PKR</span>
-                                <input
-                                  type="number"
-                                  value={form.categories[cat.id][tier].price}
-                                  onChange={(e) => {
-                                    const categories = { ...form.categories };
-                                    categories[cat.id][tier].price = e.target.value;
-                                    set("categories", categories);
-                                  }}
-                                  placeholder="2500"
-                                  className={`w-full pl-8 pr-2 py-1.5 text-xs border rounded-lg focus:outline-none transition-all ${inp}`}
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label className={`block text-[10px] uppercase font-bold mb-1 ${lbl}`}>{tier} Duration</label>
-                              <input
-                                type="text"
-                                value={form.categories[cat.id][tier].duration}
-                                onChange={(e) => {
-                                  const categories = { ...form.categories };
-                                  categories[cat.id][tier].duration = e.target.value;
-                                  set("categories", categories);
-                                }}
-                                placeholder="e.g. 20–30 mins"
-                                className={`w-full px-2 py-1.5 text-xs border rounded-lg focus:outline-none transition-all ${inp}`}
-                              />
-                            </div>
-                          </div>
-                        ) : null
-                      )}
-                    </div>
-                  )}
+                  {form.categories?.[cat.id] && <div className="ml-6 mt-2 max-w-xs">
+                    <label className={`block text-[10px] uppercase font-bold mb-1 ${lbl}`}>Price (PKR)</label>
+                    <input type="number" min="0" value={form.categories[cat.id].price} onChange={(e) => {
+                      const categories = { ...form.categories, [cat.id]: { ...form.categories[cat.id], price: e.target.value } };
+                      set("categories", categories);
+                    }} placeholder="2500" className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none ${inp}`} />
+                  </div>}
                 </div>
               ))}
             </div>
@@ -648,7 +515,7 @@ const CAR_CATEGORIES = [
   { id: "sedan", label: "Sedan (e.g. Corolla, Civic)" },
   { id: "hatchback", label: "Hatchback (e.g. Alto, Cultus)" },
   { id: "suv", label: "SUV/Crossover (e.g. BR-V, Seltos)" },
-  { id: "microcar", label: "Microcar (e.g. Mehran, Wagon R)" },
+  { id: "full_suv", label: "Full SUV (e.g. Land Cruiser, Prado)" },
   { id: "pickup", label: "Pickup/LCV (e.g. Bolan, Hilux)" },
 ];
 
@@ -708,37 +575,15 @@ const Services = () => {
   const validate = (form) => {
     if (!form.name.trim()) return "Service name is required";
     
-    const hasTiers = Object.keys(form.tiers || {}).length > 0;
     const hasCategories = Object.keys(form.categories || {}).length > 0;
-    
-    if (!hasTiers && !hasCategories) {
-      return "Select at least one pricing model (Categories or General Tiers)";
-    }
-    
-    if (hasTiers) {
-      for (const tier of Object.keys(form.tiers)) {
-        const t = form.tiers[tier];
-        if (!t.price) return `Price is required for ${tier}`;
-        if (isNaN(Number(t.price)) || Number(t.price) <= 0)
-          return `Enter a valid positive price for ${tier}`;
-        if (!t.duration?.trim()) return `Duration is required for ${tier}`;
-      }
-    }
+    if (!hasCategories) return "Select at least one car category";
     
     if (hasCategories) {
       for (const cat of Object.keys(form.categories)) {
         const catData = form.categories[cat];
-        if (!catData.base && !catData.premium) {
-          return `Select at least one tier for category ${cat}`;
-        }
-        for (const tier of ["base", "premium"]) {
-          if (catData[tier]) {
-            if (!catData[tier].price) return `Price is required for ${cat} ${tier}`;
-            if (isNaN(Number(catData[tier].price)) || Number(catData[tier].price) <= 0)
-              return `Enter a valid positive price for ${cat} ${tier}`;
-            if (!catData[tier].duration?.trim()) return `Duration is required for ${cat} ${tier}`;
-          }
-        }
+        if (!catData.price) return `Price is required for ${cat}`;
+        if (isNaN(Number(catData.price)) || Number(catData.price) <= 0)
+          return `Enter a valid positive price for ${cat}`;
       }
     }
     
@@ -746,28 +591,10 @@ const Services = () => {
   };
 
   const buildPayload = (form, imageUrl) => {
-    const tiers = {};
-    if (form.tiers) {
-      for (const tier of Object.keys(form.tiers)) {
-        tiers[tier] = {
-          price: Number(form.tiers[tier].price),
-          duration: form.tiers[tier].duration.trim(),
-        };
-      }
-    }
-    
     const categories = {};
     if (form.categories) {
       for (const cat of Object.keys(form.categories)) {
-        categories[cat] = {};
-        for (const tier of ["base", "premium"]) {
-          if (form.categories[cat][tier]) {
-            categories[cat][tier] = {
-              price: Number(form.categories[cat][tier].price),
-              duration: form.categories[cat][tier].duration.trim(),
-            };
-          }
-        }
+        categories[cat] = { price: Number(form.categories[cat].price) };
       }
     }
 
@@ -780,8 +607,7 @@ const Services = () => {
       station_ids: form.station_ids || [],
     };
 
-    if (Object.keys(tiers).length > 0) payload.tiers = tiers;
-    if (Object.keys(categories).length > 0) payload.categories = categories;
+    payload.categories = categories;
 
     return payload;
   };
@@ -987,7 +813,7 @@ const Services = () => {
                 rating: svc.rating || "",
                 image_url: svc.image_url || "",
                 station_ids: svc.station_ids || [],
-                tiers: svc.tiers || {},
+                categories: Object.fromEntries(Object.entries(svc.categories || {}).map(([key, value]) => [key, { price: value.price ?? value.base?.price ?? value.premium?.price ?? "" }])),
               }}
               onSave={handleEdit}
               onCancel={() => {
@@ -1097,29 +923,21 @@ const Services = () => {
                   </span>
                 </div>
 
-                {Object.keys(svc.tiers || {}).length > 0 && (
+                {Object.keys(svc.categories || {}).length > 0 && (
                   <div className="space-y-1 mb-2">
-                    {["base", "premium"].map((tier) =>
-                      svc.tiers?.[tier] ? (
+                    {Object.entries(svc.categories).map(([category, pricing]) =>
+                      pricing?.price != null ? (
                         <div
-                          key={tier}
+                          key={category}
                           className={`flex items-center gap-3 text-xs ${D ? "text-gray-400" : "text-gray-500"}`}
                         >
                           <span
                             className={`font-medium capitalize ${D ? "text-gray-300" : "text-gray-600"}`}
                           >
-                            {tier}:
+                            {category.replace(/_/g, " ")}:
                           </span>
                           <span className="font-semibold text-orange-500">
-                            PKR {Number(svc.tiers[tier].price).toLocaleString()}
-                          </span>
-                          <span
-                            className={D ? "text-gray-600" : "text-gray-200"}
-                          >
-                            |
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <IconClock /> {svc.tiers[tier].duration}
+                            PKR {Number(pricing.price).toLocaleString()}
                           </span>
                         </div>
                       ) : null,

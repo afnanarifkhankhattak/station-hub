@@ -19,7 +19,7 @@ import { API_BASE } from "../../../src/config"; // adjust relative path as neede
 import { apiFetch } from "../../../src/api";
 
 
-type Tier = { price: number; duration: string };
+type CategoryPrice = { price: number };
 type Service = {
   id: string;
   name: string;
@@ -27,7 +27,7 @@ type Service = {
   status?: string;
   rating?: number;
   image_url?: string;
-  tiers?: { base?: Tier; premium?: Tier };
+  categories?: Record<string, CategoryPrice>;
   station_ids?: string[];
 };
 
@@ -38,14 +38,9 @@ export default function ServicesScreen() {
     highlight_id?: string;
   }>();
 
-  const [activeTab, setActiveTab] = useState(
-    params.type === "premium" ? params.type : "basic",
-  );
   const [services, setServices] = useState<Service[]>([]);
-  const [favoriteKeys, setFavoriteKeys] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [toast, setToast] = useState({ visible: false, message: "" });
 
   // ---- highlight / scroll-to-card / pop animation ----
   const scrollViewRef = useRef<ScrollView>(null);
@@ -57,7 +52,7 @@ export default function ServicesScreen() {
   );
   const hasScrolledForThisNav = useRef(false);
 
-  // whenever a fresh highlight_id arrives (new navigation from Favorites),
+  // whenever a fresh highlight_id arrives,
   // reset so the pop can fire again
   useEffect(() => {
     if (params.highlight_id) {
@@ -65,12 +60,6 @@ export default function ServicesScreen() {
       hasScrolledForThisNav.current = false;
     }
   }, [params.highlight_id]);
-
-  useEffect(() => {
-    if (params.type === "premium" || params.type === "basic") {
-      setActiveTab(params.type);
-    }
-  }, [params.type]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -172,11 +161,6 @@ export default function ServicesScreen() {
     cardYPositions.current.set(id, y);
   };
 
-  const showToast = (message: string) => {
-    setToast({ visible: true, message });
-    setTimeout(() => setToast({ visible: false, message: "" }), 1800);
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -184,26 +168,11 @@ export default function ServicesScreen() {
       try {
         // show cached data instantly
         const cachedServices = await AsyncStorage.getItem("cached_services");
-        const cachedFavs = await AsyncStorage.getItem("cached_favorites");
         if (cachedServices) {
           setServices(JSON.parse(cachedServices));
           setLoading(false);
         }
-        if (cachedFavs) {
-          setFavoriteKeys(new Set(JSON.parse(cachedFavs)));
-        }
-
-        const token = await AsyncStorage.getItem("token");
-
-        // fetch both at the same time
-        const [servicesRes, favRes] = await Promise.all([
-          apiFetch(`${API_BASE}/services/public`),
-          token
-            ? apiFetch(`${API_BASE}/favorites/`, {
-                headers: { Authorization: `Bearer ${token}` },
-              })
-            : Promise.resolve(null),
-        ]);
+        const servicesRes = await apiFetch(`${API_BASE}/services/public`);
 
         const servicesData = await servicesRes.json();
         if (servicesRes.ok) {
@@ -217,14 +186,6 @@ export default function ServicesScreen() {
             setError(servicesData.detail || "Failed to load services");
         }
 
-        if (favRes && favRes.ok) {
-          const favData = await favRes.json();
-          const keys = (favData.services || []).map(
-            (s: any) => `${s.id}_${s.tier}`,
-          );
-          setFavoriteKeys(new Set(keys));
-          AsyncStorage.setItem("cached_favorites", JSON.stringify(keys));
-        }
       } catch (e) {
         if (!(await AsyncStorage.getItem("cached_services"))) {
           setError("Cannot connect to server");
@@ -236,57 +197,7 @@ export default function ServicesScreen() {
     fetchData();
   }, []);
 
-  const toggleFavorite = async (serviceId: string, tier: string) => {
-    const token = await AsyncStorage.getItem("token");
-    if (!token) {
-      showToast("Please log in to save favorites");
-      return;
-    }
-
-    const key = `${serviceId}_${tier}`;
-    const isFavorited = favoriteKeys.has(key);
-
-    setFavoriteKeys((prev) => {
-      const next = new Set(prev);
-      if (isFavorited) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-
-    try {
-      if (isFavorited) {
-        await apiFetch(`${API_BASE}/favorites/${serviceId}/${tier}`, {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        showToast("Removed from favorites");
-      } else {
-        await apiFetch(`${API_BASE}/favorites/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ service_id: serviceId, tier }),
-        });
-        showToast("Added to favorites");
-      }
-    } catch (e) {
-      setFavoriteKeys((prev) => {
-        const next = new Set(prev);
-        if (isFavorited) next.add(key);
-        else next.delete(key);
-        return next;
-      });
-      showToast("Something went wrong");
-    }
-  };
-
-  const tierKey =
-    activeTab === "premium" ? "premium" : activeTab === "basic" ? "base" : null;
-  const filteredServices = tierKey
-    ? services.filter((s) => s.tiers && s.tiers[tierKey])
-    : [];
+  const filteredServices = services.filter((service) => Object.keys(service.categories || {}).length > 0);
 
   useEffect(() => {
     if (
@@ -331,30 +242,6 @@ export default function ServicesScreen() {
   <View style={{ width: 24 }} />
 </View>
 
-        {/* TABS */}
-        <View style={styles.tabContainer}>
-          {["basic", "premium"].map((tab) => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => {
-                setActiveTab(tab);
-                setHighlightId(null);
-                hasScrolledForThisNav.current = false;
-              }}
-              style={[styles.tab, activeTab === tab && styles.activeTab]}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  activeTab === tab && styles.activeTabText,
-                ]}
-              >
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-
         {/* LOADING */}
         {loading && (
           <View style={{ paddingVertical: 40, alignItems: "center" }}>
@@ -381,10 +268,9 @@ export default function ServicesScreen() {
         {/* CARDS */}
         {!loading &&
           !error &&
-          tierKey &&
           filteredServices.map((service) => {
-            const tier = service.tiers![tierKey]!;
-            const isFavorited = favoriteKeys.has(`${service.id}_${tierKey}`);
+            const prices = Object.values(service.categories || {}).map((category) => category.price);
+            const startingPrice = Math.min(...prices);
             const isHighlighted = service.id === highlightId;
             return (
               <Animated.View
@@ -415,16 +301,6 @@ export default function ServicesScreen() {
                       style={styles.image}
                     />
                   )}
-                  <TouchableOpacity
-                    style={styles.heartBtn}
-                    onPress={() => toggleFavorite(service.id, tierKey)}
-                  >
-                    <Ionicons
-                      name={isFavorited ? "heart" : "heart-outline"}
-                      size={18}
-                      color="#FF7A00"
-                    />
-                  </TouchableOpacity>
                 </View>
                 <View style={styles.cardContent}>
                   <Text style={styles.title}>{service.name}</Text>
@@ -441,15 +317,11 @@ export default function ServicesScreen() {
                         </Text>
                       </View>
                     ) : null}
-                    <View style={styles.infoItem}>
-                      <Ionicons name="time-outline" size={14} color="#666" />
-                      <Text style={styles.infoText}>{tier.duration}</Text>
-                    </View>
                   </View>
 
                   <View style={styles.bottomRow}>
                     <Text style={styles.price}>
-                      PKR {Number(tier.price).toLocaleString()}
+                      From PKR {Number(startingPrice).toLocaleString()}
                     </Text>
                     <View style={styles.btnRow}>
                       <TouchableOpacity
@@ -459,10 +331,8 @@ export default function ServicesScreen() {
                             pathname: "/(tabs)/Booking/booking",
                             params: {
                               service_id: service.id,
-                              tier: tierKey,
                               name: service.name,
-                              price: String(tier.price),
-                              duration: tier.duration,
+                              price: String(startingPrice),
                               image_url: service.image_url || "",
                               station_ids: JSON.stringify(
                                 service.station_ids || [],
@@ -481,11 +351,6 @@ export default function ServicesScreen() {
           })}
       </ScrollView>
 
-      {toast.visible && (
-        <View style={styles.toast}>
-          <Text style={styles.toastText}>{toast.message}</Text>
-        </View>
-      )}
       <Bottomnav />
     </SafeAreaView>
   );
@@ -562,19 +427,6 @@ const styles = StyleSheet.create({
   image: {
     width: 110,
     height: 160,
-  },
-
-  heartBtn: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    width: 28,
-    height: 28,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 2,
   },
 
   cardContent: {
@@ -656,20 +508,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  toast: {
-    position: "absolute",
-    bottom: 90,
-    alignSelf: "center",
-    backgroundColor: "#333",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    elevation: 6,
-  },
-
-  toastText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 13,
-  },
 });

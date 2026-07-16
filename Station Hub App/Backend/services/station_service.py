@@ -30,29 +30,44 @@ def get_all_stations() -> dict:
         stations.append(data)
     return {"stations": stations}
 
-def get_public_stations(limit: int = 20, offset: int = 0) -> dict:
-    docs = db.collection("stations").where("status", "==", "Active").stream()
-    all_stations = [_public_station(doc) for doc in docs]
-    
-    # Sort in memory (descending by created_at)
-    all_stations.sort(key=lambda x: x.get("created_at", ""), reverse=True)
-    
-    total = len(all_stations)
-    paginated = all_stations[offset : offset + limit]
 
-    return {"stations": paginated, "total": total}
+def get_public_stations(limit: int = 20, cursor: str | None = None) -> dict:
+    base_query = (
+        db.collection("stations")
+        .where("status", "==", "Active")
+        .order_by("created_at", direction="DESCENDING")
+    )
+
+    total = base_query.count().get()[0][0].value
+
+    query = base_query
+    if cursor:
+        last_doc = db.collection("stations").document(cursor).get()
+        if last_doc.exists:
+            query = query.start_after(last_doc)
+
+    docs = query.limit(limit).stream()
+    paginated = [_public_station(doc) for doc in docs]
+    next_cursor = paginated[-1]["id"] if paginated else None
+
+    return {"stations": paginated, "total": total, "next_cursor": next_cursor}
+
 
 def public_search_stations(q: str) -> dict:
-    docs = db.collection("stations").where("status", "==", "Active").stream()
+    docs = (
+        db.collection("stations")
+        .where("status", "==", "Active")
+        .select(list(STATION_PUBLIC_FIELDS))
+        .stream()
+    )
     results = []
+    ql = q.lower()
     for doc in docs:
         data = doc.to_dict()
         data["id"] = doc.id
         name = data.get("name", "").lower()
-        if q.lower() in name:
-            filtered = {k: v for k, v in data.items() if k in STATION_PUBLIC_FIELDS}
-            filtered["id"] = doc.id
-            results.append(filtered)
+        if ql in name:
+            results.append(data)
     return {"stations": results}
 
 
@@ -68,6 +83,13 @@ def search_stations(q: str) -> dict:
     return {"stations": results}
 
 
+def get_public_station_by_id(station_id: str) -> dict:
+    doc = db.collection("stations").document(station_id).get()
+    if not doc.exists:
+        raise HTTPException(status_code=404, detail="Station not found")
+    return {"station": _public_station(doc)}
+
+
 def get_station_by_id(station_id: str) -> dict:
     doc = db.collection("stations").document(station_id).get()
     if not doc.exists:
@@ -77,8 +99,9 @@ def get_station_by_id(station_id: str) -> dict:
     return {"station": data}
 
 
-def add_station(body) -> dict:
+def add_station(body, user_id: str) -> dict:
     data = body.model_dump()
+    data["owner_id"] = user_id
     data["created_at"] = datetime.utcnow().isoformat()
     doc_ref = db.collection("stations").add(data)
     return {"message": "Station added", "id": doc_ref[1].id}

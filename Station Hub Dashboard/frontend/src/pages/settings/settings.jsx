@@ -723,7 +723,14 @@ const Settings = () => {
                                 {service.name}
                               </p>
                               <p className={`text-xs ${sub}`}>
-                                Rs {service.price} · {service.duration}
+                                {(() => {
+                                  const cats = service.categories || {};
+                                  const catKeys = Object.keys(cats);
+                                  if (catKeys.length > 0) {
+                                    return catKeys.map(k => `${k.replace(/_/g, ' ')}: Rs ${cats[k]?.price ?? '—'}`).join(', ');
+                                  }
+                                  return service.price != null ? `Rs ${service.price}` : 'No price set';
+                                })()}
                               </p>
                             </div>
                           </div>
@@ -738,8 +745,7 @@ const Settings = () => {
                               try {
                                 await api.put(`/services/${service.id}`, {
                                   name: service.name,
-                                  price: service.price,
-                                  duration: service.duration,
+                                  categories: service.categories || {},
                                   description: service.description || "",
                                   status: newStatus,
                                   rating: service.rating || null,

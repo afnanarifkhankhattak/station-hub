@@ -27,9 +27,9 @@ const FEATURES = [
     description: "Pick a station, date, and time slot, then confirm in just a few taps.",
   },
   {
-    icon: <Feather name="heart" size={18} color="#FF7A45" />,
-    title: "Save Favorites",
-    description: "Keep track of the services you love and revisit them anytime.",
+    icon: <Feather name="clipboard" size={18} color="#FF7A45" />,
+    title: "My Booking",
+    description: "View and manage your upcoming, completed, and cancelled bookings.",
   },
   {
     icon: <Feather name="clock" size={18} color="#FF7A45" />,

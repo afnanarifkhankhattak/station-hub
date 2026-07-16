@@ -36,16 +36,12 @@ const getServiceIcon = (name: string): any => {
   return "sparkles-outline";
 };
 
-const getServicePricing = (service: any): { price: number; duration: string } | null => {
-  // If categories are present, pick the base price of the first category as a representative display price
+const getServicePricing = (service: any): { price: number } | null => {
   if (service?.categories && Object.keys(service.categories).length > 0) {
     const firstCat = Object.values(service.categories)[0] as any;
-    if (firstCat?.base) return firstCat.base;
-    if (firstCat?.premium) return firstCat.premium;
+    if (firstCat?.price != null) return firstCat;
   }
-  if (service?.tiers?.base) return service.tiers.base;
-  if (service?.tiers?.premium) return service.tiers.premium;
-  if (service?.price != null) return { price: service.price, duration: service.duration };
+  if (service?.price != null) return { price: service.price };
   return null;
 };
 
@@ -131,7 +127,6 @@ export default function StationDetail() {
         service_id: service.id,
         name: service.name,
         price: String(pricing.price),
-        duration: String(pricing.duration),
         image_url: service.image_url || "",
         station_ids: JSON.stringify(service.station_ids || []),
       },

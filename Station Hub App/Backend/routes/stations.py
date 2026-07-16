@@ -14,8 +14,8 @@ def get_stations(current_user: dict = Depends(get_current_user)):
     return station_service.get_all_stations()
 
 @router.get("/public")
-def public_stations(limit: int = 20, offset: int = 0):
-    return station_service.get_public_stations(limit, offset)
+def public_stations(limit: int = 20, cursor: str | None = None):
+    return station_service.get_public_stations(limit, cursor)
 
 @router.get("/public/search")
 def public_search_stations(q: str = Query(..., min_length=1)):
@@ -23,7 +23,7 @@ def public_search_stations(q: str = Query(..., min_length=1)):
 
 @router.get("/public/{station_id}")
 def public_station_detail(station_id: str):
-    return station_service.get_station_by_id(station_id)
+    return station_service.get_public_station_by_id(station_id)
 
 @router.get("/search")
 def search_stations(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
@@ -37,7 +37,7 @@ def get_station(station_id: str, current_user: dict = Depends(get_current_user))
 
 @router.post("/")
 def add_station(body: StationRequest, current_user: dict = Depends(get_current_user)):
-    return station_service.add_station(body)
+    return station_service.add_station(body, current_user["sub"])
 
 @router.post("/{station_id}/rate")
 def rate_station(station_id: str, body: RatingRequest, current_user: dict = Depends(get_current_user)):

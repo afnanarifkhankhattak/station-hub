@@ -2,10 +2,44 @@ from fastapi import HTTPException
 from config.firebase import db
 from datetime import datetime
 import httpx
+from services.booking_events import booking_events
 
 # Shared HTTP client for push notifications — avoids creating a new
 # TCP connection on every booking status update.
 _push_client = httpx.Client(timeout=10.0)
+
+
+def _resolve_price(service: dict, booking: dict) -> float:
+    """Resolve price from a service doc for a given booking.
+
+    Priority:
+      1. New path: booking.car_category  + service.categories[cat].price
+      2. Legacy path: booking.tier       + service.tiers[tier].price
+      3. Fallback: service.price (very old seed data)
+    """
+    # 1. car_category → categories
+    category = booking.get("car_category")
+    if category:
+        cat_data = (service.get("categories") or {}).get(category)
+        if cat_data and cat_data.get("price") is not None:
+            return float(cat_data["price"])
+
+    # 2. tier → tiers (legacy shape, may be flat or nested)
+    tier = booking.get("tier")
+    if tier:
+        tier_data = (service.get("tiers") or {}).get(tier)
+        if tier_data:
+            if tier_data.get("price") is not None:
+                return float(tier_data["price"])
+            nested = (tier_data.get("base") or tier_data.get("premium") or {})
+            if nested.get("price") is not None:
+                return float(nested["price"])
+
+    # 3. Very old top-level price field (seed data)
+    if service.get("price") is not None:
+        return float(service["price"])
+
+    return 0.0
 
 
 def get_dashboard_stats(user_id: str) -> dict:
@@ -26,12 +60,8 @@ def get_dashboard_stats(user_id: str) -> dict:
         bookings_docs = []
 
     # ── Count users via aggregation (instead of streaming entire collection) ─
-    try:
-        count_result = db.collection("users").count().get()
-        total_users = count_result[0][0].value
-    except Exception:
-        # Fallback for older SDK versions without count()
-        total_users = len(list(db.collection("users").select([]).stream()))
+    count_result = db.collection("users").count().get()
+    total_users = count_result[0][0].value
 
     bookings = [{"id": d.id, **d.to_dict()} for d in bookings_docs]
     today = datetime.utcnow().strftime("%Y-%m-%d")
@@ -59,17 +89,12 @@ def get_dashboard_stats(user_id: str) -> dict:
     # ── Helper: get price from pre-fetched services map ───
     def _get_price_fast(b: dict) -> float:
         sid = b.get("service_id")
-        tier = b.get("tier")
-        if not sid or not tier:
+        if not sid:
             return 0.0
         svc = services_map.get(sid)
         if not svc:
             return 0.0
-        tiers = svc.get("tiers") or {}
-        tier_data = tiers.get(tier)
-        if not tier_data:
-            return 0.0
-        return float(tier_data.get("price", 0) or 0)
+        return _resolve_price(svc, b)
 
     # ── Helper: format booking from pre-fetched maps ──────
     def _fmt_fast(b: dict) -> dict:
@@ -83,7 +108,7 @@ def get_dashboard_stats(user_id: str) -> dict:
             "service_id":     b.get("service_id", ""),
             "service_name":   service_data.get("name", ""),
             "station_name":   station_names.get(b.get("station_id", ""), ""),
-            "tier":           b.get("tier", ""),
+            "car_category":   b.get("car_category", ""),
             "travel_date":    b.get("travel_date", ""),
             "travel_time":    b.get("travel_time", ""),
             "vehicle_type":   b.get("vehicle_type", ""),
@@ -150,11 +175,16 @@ def update_booking_status(booking_id: str, status: str) -> dict:
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Booking not found")
 
+    booking = doc.to_dict()
+    previous_status = booking.get("status")
+    if previous_status == status:
+        return {"message": f"Booking is already {status}", "booking_id": booking_id}
+
     doc_ref.update({"status": status})
+    event = booking_events.publish(booking.get("user_id", ""), booking_id, status)
 
     # Send push notification to customer
     try:
-        booking = doc.to_dict()
         user_id = booking.get("user_id")
         if user_id:
             user_doc = db.collection("users").document(user_id).get()
@@ -175,9 +205,14 @@ def update_booking_status(booking_id: str, status: str) -> dict:
                             "title": title_map.get(status, "Booking Update"),
                             "body": f"{service_name} has been {status}.",
                             "sound": "default",
+                            "data": {
+                                "booking_id": booking_id,
+                                "new_status": status,
+                                "timestamp": event["timestamp"],
+                            },
                         }
                     )
     except Exception as e:
         print(f"Push notification error: {e}")
 
-    return {"message": f"Booking marked as {status}", "booking_id": booking_id}
+    return {"message": f"Booking marked as {status}", "booking_id": booking_id, "event": event}

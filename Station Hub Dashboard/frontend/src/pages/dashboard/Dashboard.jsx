@@ -79,21 +79,37 @@ const Dashboard = () => {
   const user = JSON.parse(localStorage.getItem('user') || '{}')
   const userName = user.full_name?.split(' ')[0] || 'Admin'
 
-  const fetchData = useCallback(async () => {
-    setLoading(true); setError('')
+  const fetchData = useCallback(async (isBackground = false) => {
+    if (!isBackground) setLoading(true)
+    setError('')
     try {
       const data = await api.get('/dashboard/stats')
       setStats(data.stats)
       setPending(data.pending_bookings || [])
       setConfirmed(data.confirmed_bookings || [])
+      try { localStorage.setItem('cached_dashboard_stats', JSON.stringify(data)) } catch { /* quota exceeded, skip cache */ }
     } catch (e) {
-      setError(e.message || 'Failed to load dashboard')
+      if (!isBackground) setError(e.message || 'Failed to load dashboard')
     } finally {
       setLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchData() }, [fetchData])
+  useEffect(() => {
+    const cached = localStorage.getItem('cached_dashboard_stats')
+    if (cached) {
+      try {
+        const data = JSON.parse(cached)
+        setStats(data.stats)
+        setPending(data.pending_bookings || [])
+        setConfirmed(data.confirmed_bookings || [])
+        setLoading(false)
+        fetchData(true) // refresh in background, no spinner
+        return
+      } catch { /* fall through to normal fetch */ }
+    }
+    fetchData()
+  }, [fetchData])
   
   const { dark } = useTheme()
 
@@ -244,7 +260,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                       <p className={`text-xs mt-0.5 ${sub}`}>
-                        {b.service_name} {b.tier && `(${b.tier})`} · {b.station_name}
+                        {b.service_name} · {b.station_name}
                       </p>
                       <div className={`flex items-center gap-3 mt-1.5 text-xs ${sub}`}>
                         <span className="flex items-center gap-1"><IconCalendar /> {b.travel_date}</span>
@@ -319,7 +335,7 @@ const Dashboard = () => {
                     <p className={`text-sm font-semibold truncate ${txt}`}>{b.user_name || 'Unknown'}</p>
                   </div>
                   <p className={`text-xs ${sub}`}>
-                    {b.service_name} {b.tier && `(${b.tier})`} · {b.station_name}
+                    {b.service_name} · {b.station_name}
                   </p>
                   <div className={`flex items-center gap-1 text-xs mt-0.5 ${sub}`}>
                     <IconCalendar />{b.travel_date}

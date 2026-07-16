@@ -276,7 +276,6 @@ const Notifications = () => {
                   userName,
                   userProfileImage,
                   service: serviceName,
-                  tier: data.tier || "",
                   date: data.travel_date || "",
                   time: data.travel_time || "",
                   vehicleType: data.vehicle_type || "",
@@ -530,9 +529,6 @@ const Notifications = () => {
                         {formatDate(n.date)}
                         {n.time && ` · ${n.time}`}
                       </span>
-                    )}
-                    {n.tier && (
-                      <span className="capitalize">{n.tier} tier</span>
                     )}
                   </div>
                 </div>

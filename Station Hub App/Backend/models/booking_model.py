@@ -14,9 +14,10 @@ class BookingModel:
     vehicle_number: str
     special_request: Optional[str] = ""
     service_id: Optional[str] = ""
-    tier: Optional[str] = ""
     status: str = "pending"
     created_at: str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    tier: Optional[str] = ""
+    car_category: Optional[str] = ""
 
     def to_dict(self) -> dict:
         return {
@@ -29,7 +30,8 @@ class BookingModel:
             "vehicle_number": self.vehicle_number,
             "special_request": self.special_request,
             "service_id": self.service_id,
-            "tier": self.tier,
             "status": self.status,
             "created_at": self.created_at,
+            "tier": self.tier,
+            "car_category": self.car_category,
         }
