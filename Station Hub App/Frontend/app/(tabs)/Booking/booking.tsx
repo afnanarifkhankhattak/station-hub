@@ -66,8 +66,21 @@ type DateItem = {
   isOff?: boolean;
 };
 
-const MOTORBIKE_PRICE_MULTIPLIER = 0.7;
 const DEFAULT_DISCOUNT_PERCENT = 20;
+
+const CAR_CATEGORIES = [
+  { id: "sedan", label: "Sedan" },
+  { id: "hatchback", label: "Hatchback" },
+  { id: "suv", label: "SUV/Crossover" },
+  { id: "full_suv", label: "Full SUV" },
+  { id: "pickup", label: "Pickup" },
+] as const;
+
+const BIKE_CATEGORIES = [
+  { id: "economy_bike", label: "Economy Bikes" },
+  { id: "standard_bike", label: "Standard Bikes" },
+  { id: "premium_bike", label: "Premium Bikes" },
+] as const;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 
@@ -475,27 +488,31 @@ export default function BookingScreen() {
 
   /* ── Vehicle & special request ────────────────────────────── */
   const [vehicleType, setVehicleType] = useState<"Car" | "Motorbike">("Car");
-  const [carCategory, setCarCategory] = useState<string>("sedan");
+  // Shared category key stored as booking.car_category (used for cars and bikes)
+  const [vehicleCategory, setVehicleCategory] = useState<string>("sedan");
   const [vehicleBrand, setVehicleBrand] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [specialRequest, setSpecialRequest] = useState("");
 
+  const handleVehicleTypeChange = (type: "Car" | "Motorbike") => {
+    setVehicleType(type);
+    setVehicleCategory(type === "Car" ? "sedan" : "economy_bike");
+  };
+
   const basePrice = React.useMemo(() => {
     if (!selectedService) return null;
-    
-    // If Car and categories exist for the selected category, use it
-    if (vehicleType === "Car" && selectedService.categories?.[carCategory]?.price) {
-      return selectedService.categories[carCategory].price;
+
+    // Price from selected vehicle category (car or bike)
+    if (selectedService.categories?.[vehicleCategory]?.price) {
+      return selectedService.categories[vehicleCategory].price;
     }
     return null;
-  }, [selectedService, vehicleType, carCategory]);
+  }, [selectedService, vehicleCategory]);
 
   const adjustedPrice = React.useMemo(() => {
     if (basePrice == null) return null;
-    return vehicleType === "Motorbike"
-      ? Math.round(basePrice * MOTORBIKE_PRICE_MULTIPLIER)
-      : basePrice;
-  }, [basePrice, vehicleType]);
+    return basePrice;
+  }, [basePrice]);
 
   const discountAmount = React.useMemo(() => {
     if (adjustedPrice == null) return null;
@@ -537,7 +554,7 @@ export default function BookingScreen() {
           travel_date: selectedDate,
           travel_time: selectedTime,
           vehicle_type: vehicleType,
-          car_category: vehicleType === "Car" ? carCategory : "",
+          car_category: vehicleCategory,
           vehicle_brand: vehicleBrand.trim(),
           vehicle_number: vehicleNumber.trim(),
           special_request: specialRequest.trim(),
@@ -853,7 +870,7 @@ export default function BookingScreen() {
               <TouchableOpacity
                 key={type}
                 style={styles.radioOption}
-                onPress={() => setVehicleType(type)}
+                onPress={() => handleVehicleTypeChange(type)}
               >
                 <View
                   style={[
@@ -868,41 +885,35 @@ export default function BookingScreen() {
             ))}
           </View>
           
-          {/* CAR CATEGORY SELECTOR */}
-          {vehicleType === "Car" && (
-            <View style={{ paddingHorizontal: 18, marginTop: 15 }}>
-              <Text style={{ fontSize: 13, fontWeight: "600", marginBottom: 8, color: "#444" }}>Car Category</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row" }}>
-                {[
-                  { id: "sedan", label: "Sedan" },
-                  { id: "hatchback", label: "Hatchback" },
-                  { id: "suv", label: "SUV/Crossover" },
-                  { id: "full_suv", label: "Full SUV" },
-                  { id: "pickup", label: "Pickup" },
-                ].map(cat => (
-                  <TouchableOpacity
-                    key={cat.id}
-                    onPress={() => setCarCategory(cat.id)}
-                    style={{
-                      paddingHorizontal: 14,
-                      paddingVertical: 8,
-                      borderRadius: 20,
-                      backgroundColor: carCategory === cat.id ? "#FF7A00" : "#f0f0f0",
-                      marginRight: 8,
-                    }}
-                  >
-                    <Text style={{ 
-                      fontSize: 12, 
-                      fontWeight: "600", 
-                      color: carCategory === cat.id ? "#fff" : "#444" 
-                    }}>
-                      {cat.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          )}
+          {/* VEHICLE CATEGORY SELECTOR (Car / Bike) */}
+          <View style={{ paddingHorizontal: 18, marginTop: 15 }}>
+            <Text style={{ fontSize: 13, fontWeight: "600", marginBottom: 8, color: "#444" }}>
+              {vehicleType === "Car" ? "Car Category" : "Bike Category"}
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row" }}>
+              {(vehicleType === "Car" ? CAR_CATEGORIES : BIKE_CATEGORIES).map((cat) => (
+                <TouchableOpacity
+                  key={cat.id}
+                  onPress={() => setVehicleCategory(cat.id)}
+                  style={{
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                    borderRadius: 20,
+                    backgroundColor: vehicleCategory === cat.id ? "#FF7A00" : "#f0f0f0",
+                    marginRight: 8,
+                  }}
+                >
+                  <Text style={{
+                    fontSize: 12,
+                    fontWeight: "600",
+                    color: vehicleCategory === cat.id ? "#fff" : "#444",
+                  }}>
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
 
           {/* INPUTS */}
           <View style={styles.inputRow}>

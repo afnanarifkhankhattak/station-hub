@@ -8,7 +8,6 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -20,7 +19,6 @@ import * as AuthSession from "expo-auth-session";
 import { API_BASE } from "../../src/config";
 import { apiFetch } from "../../src/api";
 
-
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Login() {
@@ -29,22 +27,26 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({ visible: false, message: "", type: "success" });
+  const [toast, setToast] = useState({
+    visible: false,
+    message: "",
+    type: "success",
+  });
 
   const showToast = (message: string) => {
-  setToast({ visible: true, message, type: "success" });
-  setTimeout(() => {
-    setToast({ visible: false, message: "", type: "success" });
-    router.replace("/set-location");
-  }, 2000);
-};
+    setToast({ visible: true, message, type: "success" });
+    setTimeout(() => {
+      setToast({ visible: false, message: "", type: "success" });
+      router.replace("/set-location");
+    }, 2000);
+  };
 
-const showError = (message: string) => {
-  setToast({ visible: true, message, type: "error" });
-  setTimeout(() => {
-    setToast({ visible: false, message: "", type: "success" });
-  }, 2500);
-};
+  const showError = (message: string) => {
+    setToast({ visible: true, message, type: "error" });
+    setTimeout(() => {
+      setToast({ visible: false, message: "", type: "success" });
+    }, 2500);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -69,22 +71,25 @@ const showError = (message: string) => {
       }
     } catch (error) {
       console.log("LOGIN ERROR DETAILS:", error);
-      // showError("Cannot connect to server");
+      showError("Cannot connect to server");
     } finally {
       setLoading(false);
     }
   };
 
- const redirectUri = AuthSession.makeRedirectUri({
-  scheme: "stationhubapp",
-  useProxy: true,
-} as any);
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: "stationhubapp",
+    useProxy: true,
+  } as any);
 
   console.log("Google redirect URI:", redirectUri);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-   androidClientId: "969978945255-r3p5fueh9c1rle7pd77ngrk1m1fshm4i.apps.googleusercontent.com",
-webClientId: "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleusercontent.com", scopes: ["profile", "email"],
+    androidClientId:
+      "994736565413-aft3m0ggnds9bajhed8e7hor1h45bnhs.apps.googleusercontent.com",
+    webClientId:
+      "994736565413-ovpisjfct483lp4ltlm2a8moltqdh3uf.apps.googleusercontent.com",
+    scopes: ["profile", "email"],
     redirectUri,
   });
 
@@ -100,99 +105,105 @@ webClientId: "969978945255-lathtj5oiu9l2mf9iohlhb5cbfhif46q.apps.googleuserconte
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.container}
       >
-      <View style={styles.card}>
-
-        {/* LOGO */}
-        <Image
-          source={require("../../assets/images/Logo.png")}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-
-        {/* TITLE */}
-        <Text style={styles.heading}>Welcome Back 👋</Text>
-        <Text style={styles.subText}>Login to continue</Text>
-
-        {/* EMAIL */}
-        <Text style={styles.label}>Email or Phone</Text>
-        <TextInput
-          placeholder="Enter Email or Phone"
-          placeholderTextColor="#aaa"
-          style={styles.input}
-          value={email}
-          onChangeText={setEmail}
-        />
-
-        {/* PASSWORD */}
-        <Text style={styles.label}>Password</Text>
-        <TextInput
-          placeholder="Enter Password"
-          placeholderTextColor="#aaa"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-          onChangeText={setPassword}
-        />
-
-        {/* FORGOT */}
-        <Text
-          style={styles.forgot}
-          onPress={() => router.push("/reset-password")}
-        >
-          Forgot Password?
-        </Text>
-
-        {/* LOGIN BUTTON */}
-        <TouchableOpacity
-          style={[styles.loginBtn, loading && { opacity: 0.7 }]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.loginText}>Log In</Text>
-          )}
-        </TouchableOpacity>
-
-        {/* OR */}
-        <Text style={styles.or}>OR</Text>
-
-        {/* GOOGLE BUTTON */}
-        <TouchableOpacity
-          style={styles.googleBtn}
-          disabled={!request}
-          onPress={() => promptAsync()}
-        >
+        <View style={styles.card}>
+          {/* LOGO */}
           <Image
-            source={require("../../assets/images/google.png")}
-            style={styles.googleIcon}
+            source={require("../../assets/images/Logo.png")}
+            style={styles.logo}
+            resizeMode="contain"
           />
-          <Text style={styles.googleText}>Continue with Google</Text>
-        </TouchableOpacity>
 
-        {/* SIGNUP */}
-        <Text style={styles.signup}>
-          New user?{" "}
+          {/* TITLE */}
+          <Text style={styles.heading}>Welcome Back 👋</Text>
+          <Text style={styles.subText}>Login to continue</Text>
+
+          {/* EMAIL */}
+          <Text style={styles.label}>Email or Phone</Text>
+          <TextInput
+            placeholder="Enter Email or Phone"
+            placeholderTextColor="#aaa"
+            style={styles.input}
+            value={email}
+            onChangeText={setEmail}
+          />
+
+          {/* PASSWORD */}
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            placeholder="Enter Password"
+            placeholderTextColor="#aaa"
+            secureTextEntry
+            style={styles.input}
+            value={password}
+            onChangeText={setPassword}
+          />
+
+          {/* FORGOT */}
           <Text
-            style={styles.link}
-            onPress={() => router.push("/signup")}
+            style={styles.forgot}
+            onPress={() => router.push("/reset-password")}
           >
-            Create Account
+            Forgot Password?
           </Text>
-        </Text>
 
-      </View>
+          {/* LOGIN BUTTON */}
+          <TouchableOpacity
+            style={[styles.loginBtn, loading && { opacity: 0.7 }]}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginText}>Log In</Text>
+            )}
+          </TouchableOpacity>
 
-      {/* TOAST */}
-      {toast.visible && (
-      <View style={[styles.toast, { backgroundColor: toast.type === "error" ? "#e74c3c" : "#FF7A00" }]}>
-        <Text style={styles.toastText}>
-          {toast.type === "error" ? "✕ " : "✓ "}{toast.message}
-        </Text>
-      </View>
-    )}
+          {/* OR */}
+          <Text style={styles.or}>OR</Text>
 
+          {/* GOOGLE BUTTON */}
+          <TouchableOpacity
+            style={styles.googleBtn}
+            disabled={!request}
+            onPress={() => promptAsync()}
+          >
+            <Image
+              source={require("../../assets/images/google.png")}
+              style={styles.googleIcon}
+            />
+            <Text style={styles.googleText}>Continue with Google</Text>
+          </TouchableOpacity>
+
+          {/* SIGNUP */}
+          <Text style={styles.signup}>
+            New user?{" "}
+            <Text
+              style={styles.link}
+              onPress={() => router.push("/signup")}
+            >
+              Create Account
+            </Text>
+          </Text>
+        </View>
+
+        {/* TOAST */}
+        {toast.visible && (
+          <View
+            style={[
+              styles.toast,
+              {
+                backgroundColor:
+                  toast.type === "error" ? "#e74c3c" : "#FF7A00",
+              },
+            ]}
+          >
+            <Text style={styles.toastText}>
+              {toast.type === "error" ? "✕ " : "✓ "}
+              {toast.message}
+            </Text>
+          </View>
+        )}
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

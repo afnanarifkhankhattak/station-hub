@@ -164,16 +164,60 @@ def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
 
 # ─── google Auth ────────────────────────────────────────
 
-def google_login(id_token: str) -> dict:
+# Must match OAuth client IDs from google-services.json / Google Cloud Console.
+# Audience of the Google ID token will be one of these.
+GOOGLE_OAUTH_CLIENT_IDS = [
+    "994736565413-ovpisjfct483lp4ltlm2a8moltqdh3uf.apps.googleusercontent.com",  # Web (type 3)
+    "994736565413-aft3m0ggnds9bajhed8e7hor1h45bnhs.apps.googleusercontent.com",  # Android (type 1)
+]
+
+
+def _decode_google_or_firebase_token(token: str) -> dict:
+    """
+    Accept either:
+    1) A Firebase ID token (if the client used Firebase Auth), or
+    2) A Google OAuth ID token from expo-auth-session.
+    """
+    # 1) Try Firebase ID token first
     try:
-        decoded = firebase_auth.verify_id_token(id_token, clock_skew_seconds=10)
-    except Exception as e:
-        print("Google token error:", str(e))
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
+        return firebase_auth.verify_id_token(token, clock_skew_seconds=10)
+    except Exception as firebase_err:
+        print("Not a Firebase ID token:", str(firebase_err))
+
+    # 2) Try Google OAuth ID token (common with Expo Google login)
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+
+        request = google_requests.Request()
+        last_error = None
+        for audience in GOOGLE_OAUTH_CLIENT_IDS:
+            try:
+                return google_id_token.verify_oauth2_token(token, request, audience)
+            except Exception as e:
+                last_error = e
+                continue
+        raise last_error or ValueError("Google token audience mismatch")
+    except Exception as google_err:
+        print("Google token error:", str(google_err))
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid Google token: {google_err}",
+        )
+
+
+def google_login(id_token: str) -> dict:
+    decoded = _decode_google_or_firebase_token(id_token)
 
     email = decoded.get("email")
     full_name = decoded.get("name", "")
     profile_image = decoded.get("picture", "")
+
+    if not email:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Google account did not provide an email",
+        )
 
     docs = db.collection("users").where("email", "==", email).limit(1).get()
 

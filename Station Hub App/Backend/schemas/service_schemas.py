@@ -26,9 +26,20 @@ class ServiceRequest(BaseModel):
     @field_validator("categories")
     @classmethod
     def validate_categories(cls, categories: Dict[str, CategoryPricing]):
-        allowed = {"sedan", "hatchback", "suv", "full_suv", "pickup"}
+        allowed = {
+            # Car categories
+            "sedan",
+            "hatchback",
+            "suv",
+            "full_suv",
+            "pickup",
+            # Bike categories
+            "economy_bike",
+            "standard_bike",
+            "premium_bike",
+        }
         if not categories:
-            raise ValueError("Select at least one car category")
+            raise ValueError("Select at least one vehicle category")
         invalid = set(categories) - allowed
         if invalid:
             raise ValueError(f"Invalid category(s): {', '.join(sorted(invalid))}")

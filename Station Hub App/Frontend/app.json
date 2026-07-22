@@ -18,7 +18,8 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "package": "com.laibafaryal.stationhubapp",
+      "package": "com.stationhub1.app",
+      "googleServicesFile": "./google-services.json",
       "useNextNotificationsApi": true,
       "googleMapsApiKey": ""
     },

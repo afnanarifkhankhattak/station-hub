@@ -340,7 +340,7 @@ const ServiceForm = ({
             </select>
           </div>
 
-          {/* CATEGORY PRICING */}
+          {/* CAR CATEGORY PRICING */}
           <div className="col-span-3 mt-2">
             <div className={`p-4 rounded-xl border ${D ? "border-[#2a2d3e] bg-[#1a1c23]" : "border-gray-200 bg-white"}`}>
               <label className={`block text-xs font-bold mb-2 ${lbl}`}>
@@ -374,6 +374,46 @@ const ServiceForm = ({
                       const categories = { ...form.categories, [cat.id]: { ...form.categories[cat.id], price: e.target.value } };
                       set("categories", categories);
                     }} placeholder="2500" className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none ${inp}`} />
+                  </div>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* BIKE CATEGORY PRICING */}
+          <div className="col-span-3 mt-2">
+            <div className={`p-4 rounded-xl border ${D ? "border-[#2a2d3e] bg-[#1a1c23]" : "border-gray-200 bg-white"}`}>
+              <label className={`block text-xs font-bold mb-2 ${lbl}`}>
+                Bike Categories Pricing
+              </label>
+              
+              {BIKE_CATEGORIES.map((cat) => (
+                <div key={cat.id} className="mb-4 last:mb-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <input
+                      type="checkbox"
+                      checked={!!form.categories?.[cat.id]}
+                      onChange={(e) => {
+                        const categories = { ...form.categories };
+                        if (e.target.checked) {
+                          categories[cat.id] = { price: "" };
+                        } else {
+                          delete categories[cat.id];
+                        }
+                        set("categories", categories);
+                      }}
+                      className="accent-orange-500"
+                      id={`cat-${cat.id}`}
+                    />
+                    <label htmlFor={`cat-${cat.id}`} className="text-sm font-medium cursor-pointer">{cat.label}</label>
+                  </div>
+
+                  {form.categories?.[cat.id] && <div className="ml-6 mt-2 max-w-xs">
+                    <label className={`block text-[10px] uppercase font-bold mb-1 ${lbl}`}>Price (PKR)</label>
+                    <input type="number" min="0" value={form.categories[cat.id].price} onChange={(e) => {
+                      const categories = { ...form.categories, [cat.id]: { ...form.categories[cat.id], price: e.target.value } };
+                      set("categories", categories);
+                    }} placeholder="800" className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none ${inp}`} />
                   </div>}
                 </div>
               ))}
@@ -519,6 +559,16 @@ const CAR_CATEGORIES = [
   { id: "pickup", label: "Pickup/LCV (e.g. Bolan, Hilux)" },
 ];
 
+const BIKE_CATEGORIES = [
+  { id: "economy_bike", label: "Economy Bikes (e.g. Honda CD 70, Scooties)" },
+  { id: "standard_bike", label: "Standard Bikes (e.g. Honda CG 125)" },
+  { id: "premium_bike", label: "Premium Bikes (Heavy Bikes)" },
+];
+
+const CATEGORY_LABELS = Object.fromEntries(
+  [...CAR_CATEGORIES, ...BIKE_CATEGORIES].map((c) => [c.id, c.label]),
+);
+
 ////////////////////////////////////////////////////////////////////////////////
 // ── Main Component ─────────────────────────────────────────
 const Services = () => {
@@ -576,14 +626,15 @@ const Services = () => {
     if (!form.name.trim()) return "Service name is required";
     
     const hasCategories = Object.keys(form.categories || {}).length > 0;
-    if (!hasCategories) return "Select at least one car category";
+    if (!hasCategories) return "Select at least one vehicle category (car or bike)";
     
     if (hasCategories) {
       for (const cat of Object.keys(form.categories)) {
         const catData = form.categories[cat];
-        if (!catData.price) return `Price is required for ${cat}`;
+        const catLabel = CATEGORY_LABELS[cat] || cat;
+        if (!catData.price) return `Price is required for ${catLabel}`;
         if (isNaN(Number(catData.price)) || Number(catData.price) <= 0)
-          return `Enter a valid positive price for ${cat}`;
+          return `Enter a valid positive price for ${catLabel}`;
       }
     }
     
@@ -934,7 +985,7 @@ const Services = () => {
                           <span
                             className={`font-medium capitalize ${D ? "text-gray-300" : "text-gray-600"}`}
                           >
-                            {category.replace(/_/g, " ")}:
+                            {CATEGORY_LABELS[category] || category.replace(/_/g, " ")}:
                           </span>
                           <span className="font-semibold text-orange-500">
                             PKR {Number(pricing.price).toLocaleString()}

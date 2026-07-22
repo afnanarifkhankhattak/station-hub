@@ -726,8 +726,18 @@ const Settings = () => {
                                 {(() => {
                                   const cats = service.categories || {};
                                   const catKeys = Object.keys(cats);
+                                  const labels = {
+                                    sedan: "Sedan",
+                                    hatchback: "Hatchback",
+                                    suv: "SUV/Crossover",
+                                    full_suv: "Full SUV",
+                                    pickup: "Pickup",
+                                    economy_bike: "Economy Bikes",
+                                    standard_bike: "Standard Bikes",
+                                    premium_bike: "Premium Bikes",
+                                  };
                                   if (catKeys.length > 0) {
-                                    return catKeys.map(k => `${k.replace(/_/g, ' ')}: Rs ${cats[k]?.price ?? '—'}`).join(', ');
+                                    return catKeys.map(k => `${labels[k] || k.replace(/_/g, ' ')}: Rs ${cats[k]?.price ?? '—'}`).join(', ');
                                   }
                                   return service.price != null ? `Rs ${service.price}` : 'No price set';
                                 })()}

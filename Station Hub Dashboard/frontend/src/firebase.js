@@ -3,13 +3,13 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBrHlHg7jzPAdf2cHC5MZv3o1O5OgLnBq4",
-  authDomain: "stationhubproject.firebaseapp.com",
-  projectId: "stationhubproject",
-  storageBucket: "stationhubproject.firebasestorage.app",
-  messagingSenderId: "522728415702",
-  appId: "1:522728415702:web:633c3cfbc6a7ff6b3d0477",
-  measurementId: "G-F08JKT8TKP"
+  apiKey: "AIzaSyCYbYjcMnGg5v1GI2Irjs_s4xmqsGLzbf8",
+  authDomain: "station-hub-3fda8.firebaseapp.com",
+  projectId: "station-hub-3fda8",
+  storageBucket: "station-hub-3fda8.firebasestorage.app",
+  messagingSenderId: "994736565413",
+  appId: "1:994736565413:web:ebc592d3ced17e9723714c",
+  measurementId: "G-QNQ08CNXD9"
 };
 
 const app = initializeApp(firebaseConfig);
