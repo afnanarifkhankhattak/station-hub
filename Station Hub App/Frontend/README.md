@@ -1,50 +1,135 @@
-# Welcome to your Expo app 👋
+# Station Hub — Mobile App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Customer-facing **React Native (Expo)** app for discovering vehicle service stations and booking wash, service, polishing, detailing, and related offerings.
 
-## Get started
+---
 
-1. Install dependencies
+## Stack
 
-   ```bash
-   npm install
-   ```
+| Piece | Choice |
+|---|---|
+| Runtime | Expo SDK ~51, React Native 0.74 |
+| Routing | Expo Router (file-based) |
+| Storage | AsyncStorage (tokens, cache) |
+| Maps / location | `react-native-maps`, `expo-location` |
+| API | Shared FastAPI backend via `src/api.ts` |
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## Prerequisites
 
-In the output, you'll find options to open the app in a
+- Node.js 18+
+- Backend running (see [Backend README](../Backend/README.md))
+- Expo Go **or** Android/iOS emulator **or** a development build
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+---
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Setup
 
 ```bash
-npm run reset-project
+cd "Station Hub App/Frontend"
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Environment (`.env`)
 
-## Learn more
+```env
+EXPO_PUBLIC_API_PORT=8000
+EXPO_PUBLIC_API_URL=
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+| Variable | Description |
+|---|---|
+| `EXPO_PUBLIC_API_PORT` | Backend port (default `8000`) |
+| `EXPO_PUBLIC_API_URL` | Optional full base URL. If empty, the app picks a host from Expo (`hostUri`) or uses `10.0.2.2` on Android emulator / `localhost` otherwise |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+See `src/config.ts` for resolution logic.
 
-## Join the community
+### Start
 
-Join our community of developers creating universal apps.
+```bash
+npm start
+# same as: npx expo start
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Other scripts:
+
+```bash
+npm run android   # expo run:android
+npm run ios       # expo run:ios
+npm run web       # expo start --web
+```
+
+In the Expo CLI, open with Expo Go, an emulator, or a dev client.
+
+---
+
+## App structure
+
+```text
+Frontend/
+├── app/
+│   ├── (auth)/               # Landing, login, signup, OTP, reset password
+│   ├── (tabs)/
+│   │   ├── Home/             # Home, station detail, notifications
+│   │   ├── Booking/          # Book + confirmation
+│   │   ├── service/          # Service catalog
+│   │   └── profile/          # Profile, history, settings screens
+│   ├── onboarding/
+│   ├── splash/
+│   ├── set-location.tsx
+│   └── choose-location.tsx
+├── components/               # e.g. Bottomnav
+├── context/                  # User provider
+├── hooks/                    # e.g. useHardwareDoubleBackToExit
+├── src/
+│   ├── api.ts                # apiFetch + token refresh
+│   ├── config.ts             # API_BASE
+│   └── ...
+├── utils/                    # e.g. uiGoBack
+├── assets/
+└── app.json
+```
+
+---
+
+## Main features
+
+- Auth with JWT; automatic refresh via `apiFetch`
+- Nearby stations from current or chosen location
+- Station detail and offered services
+- Booking flow with vehicle type and category (car/bike)
+- My bookings, profile, FAQs, about, privacy
+- Android hardware back: double-press to exit on root tabs; header back uses `uiGoBack` (never exits)
+
+---
+
+## API client
+
+All authenticated calls should go through:
+
+```ts
+import { apiFetch } from "../src/api";
+import { API_BASE } from "../src/config";
+```
+
+`apiFetch` attaches the access token, retries once after refresh on `401`, and sends the user to login if refresh fails.
+
+---
+
+## Backend URL tips
+
+| Environment | Suggested base |
+|---|---|
+| Android emulator | Auto → `http://10.0.2.2:8000` when no Expo host |
+| Physical device (same LAN) | Leave `EXPO_PUBLIC_API_URL` empty so host is taken from Expo, or set your machine IP, e.g. `http://192.168.x.x:8000` |
+| iOS simulator / web | Often `http://localhost:8000` |
+
+Backend must be reachable on the device/emulator network.
+
+---
+
+## Related
+
+- Backend: [../Backend/README.md](../Backend/README.md)
+- Root monorepo: [../../README.md](../../README.md)
