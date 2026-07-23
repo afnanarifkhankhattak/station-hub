@@ -7,42 +7,115 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Support multiple ways of providing Firebase credentials:
-# 1. Path to JSON file (default): FIREBASE_CREDENTIALS=/path/to/serviceAccountKey.json
-# 2. JSON string in env var: FIREBASE_CREDENTIALS='{"type":...}'
-# 3. Base64-encoded JSON in env var
+# Ways to provide Firebase credentials (any one works):
+# 1. Path to JSON file: FIREBASE_CREDENTIALS=/path/to/serviceAccountKey.json
+# 2. Full JSON string in FIREBASE_CREDENTIALS
+# 3. Base64-encoded JSON in FIREBASE_CREDENTIALS
+# 4. Render Secret File named serviceAccountKey.json (auto-detected)
 
-cred_env = os.getenv("FIREBASE_CREDENTIALS")
+_DEFAULT_PATHS = (
+    "config/serviceAccountKey.json",
+    "serviceAccountKey.json",
+    "/etc/secrets/serviceAccountKey.json",
+)
 
-def _get_credential_from_env(value):
-    # If value is a path to an existing file, use it
-    if os.path.exists(value):
-        return credentials.Certificate(value)
-    # Try parsing as JSON string
+
+def _normalize(value: str) -> str:
+    value = value.strip()
+    # Remove wrapping quotes people sometimes paste into Render
+    if (value.startswith("'") and value.endswith("'")) or (
+        value.startswith('"') and value.endswith('"')
+    ):
+        value = value[1:-1].strip()
+    return value
+
+
+def _certificate_from_path(path: str):
+    if path and os.path.isfile(path):
+        return credentials.Certificate(path)
+    return None
+
+
+def _certificate_from_json_text(text: str):
     try:
-        cred_dict = json.loads(value)
-        return credentials.Certificate(cred_dict)
+        data = json.loads(text)
+        if isinstance(data, dict) and data.get("type") == "service_account":
+            return credentials.Certificate(data)
     except Exception:
         pass
-    # Try base64-decoding then parsing
+    return None
+
+
+def _certificate_from_base64(text: str):
     try:
-        decoded = base64.b64decode(value)
-        cred_dict = json.loads(decoded)
-        return credentials.Certificate(cred_dict)
+        # Render / shells may wrap long values with whitespace/newlines
+        cleaned = "".join(text.split())
+        decoded = base64.b64decode(cleaned)
+        data = json.loads(decoded)
+        if isinstance(data, dict) and data.get("type") == "service_account":
+            return credentials.Certificate(data)
     except Exception:
         pass
-    raise ValueError("FIREBASE_CREDENTIALS must be a valid path, JSON string, or base64 JSON")
+    return None
 
-# Fallback path if no env var provided
-default_path = "config/serviceAccountKey.json"
+
+def _resolve_credentials():
+    raw = os.getenv("FIREBASE_CREDENTIALS")
+    tried = []
+
+    if raw:
+        value = _normalize(raw)
+        tried.append(f"FIREBASE_CREDENTIALS={value[:80]}{'...' if len(value) > 80 else ''}")
+
+        # 1) Exact path
+        cred = _certificate_from_path(value)
+        if cred:
+            return cred
+
+        # 2) If they still used the local path string, map common names to Render secrets
+        basename = os.path.basename(value.rstrip("/"))
+        for candidate in (
+            value,
+            os.path.join("/etc/secrets", basename),
+            os.path.join("/etc/secrets", "serviceAccountKey.json"),
+            basename,
+            os.path.join("config", basename),
+        ):
+            if candidate in tried:
+                continue
+            tried.append(candidate)
+            cred = _certificate_from_path(candidate)
+            if cred:
+                return cred
+
+        # 3) JSON string
+        cred = _certificate_from_json_text(value)
+        if cred:
+            return cred
+
+        # 4) Base64 JSON
+        cred = _certificate_from_base64(value)
+        if cred:
+            return cred
+
+    # 5) Auto-detect local / Render secret files
+    for path in _DEFAULT_PATHS:
+        tried.append(path)
+        cred = _certificate_from_path(path)
+        if cred:
+            return cred
+
+    raise ValueError(
+        "Could not load Firebase credentials. "
+        "Set FIREBASE_CREDENTIALS to a real file path, full JSON, or base64 JSON. "
+        "On Render, add a Secret File named serviceAccountKey.json and set "
+        "FIREBASE_CREDENTIALS=/etc/secrets/serviceAccountKey.json. "
+        f"Tried: {tried}"
+    )
+
 
 if not firebase_admin._apps:
-    if cred_env:
-        cred = _get_credential_from_env(cred_env)
-    else:
-        cred = credentials.Certificate(default_path)
+    cred = _resolve_credentials()
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
-
-
