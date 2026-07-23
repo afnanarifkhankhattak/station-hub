@@ -245,7 +245,7 @@ const Dashboard = () => {
                       <img
                         src={b.user_profile_image}
                         alt={b.user_name}
-                        className="w-9 h-9 rounded-full object-cover flex-shrink-0"
+                        className="w-9 h-9 rounded-full object-cover shrink-0"
                       />
                     ) : (
                       <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
