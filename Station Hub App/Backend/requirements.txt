@@ -2,6 +2,8 @@ fastapi==0.115.12
 uvicorn==0.30.6
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
+# bcrypt 4.1+ breaks passlib 1.7.4 (signup/login password hashing)
+bcrypt==4.0.1
 python-dotenv==1.0.1
 firebase-admin==6.5.0
 python-multipart==0.0.9
