@@ -17,9 +17,11 @@ import {
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../context/userContext";
+import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
 
 
 export default function ProfileSettingsScreen() {
+  useHardwareDoubleBackToExit();
   const router = useRouter();
   const { user, loading } = useUser();
   

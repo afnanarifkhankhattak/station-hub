@@ -16,6 +16,7 @@ from schemas.auth_schemas import (
 from utils.jwt_handler import create_access_token, create_refresh_token, verify_token
 from utils.password_handler import hash_password, verify_password
 from utils.email_handler import generate_otp, send_otp_email
+from services.service_service import seed_default_services_for_owner
 
 
 # ─── Register ───────────────────────────────────────────────
@@ -33,6 +34,12 @@ def register_user(body: RegisterRequest) -> dict:
 
     doc_ref = db.collection("users").add(user.to_dict())
     user_id = doc_ref[1].id
+
+    # Pre-list essential services for the new station owner (non-blocking on failure).
+    try:
+        seed_default_services_for_owner(user_id)
+    except Exception as e:
+        print(f"Failed to seed default services for user {user_id}: {e}")
 
     token = create_access_token({"sub": user_id, "email": body.email})
     refresh_token = create_refresh_token({"sub": user_id, "email": body.email})

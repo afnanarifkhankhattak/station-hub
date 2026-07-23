@@ -13,6 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
@@ -235,7 +236,7 @@ export default function ServicesScreen() {
       >
         {/* HEADER */}
 <View style={styles.header}>
-  <TouchableOpacity onPress={() => router.back()}>
+  <TouchableOpacity onPress={uiGoBack}>
     <Ionicons name="arrow-back" size={22} color="#000" />
   </TouchableOpacity>
   <Text style={styles.headerTitle}>Services</Text>

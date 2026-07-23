@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import { LinearGradient } from "expo-linear-gradient";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,8 +20,6 @@ import { apiFetch } from "../../../../src/api";
 
 
 export default function ChangePasswordScreen() {
-  const router = useRouter();
-
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -66,7 +64,7 @@ export default function ChangePasswordScreen() {
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
-        router.back();
+        uiGoBack();
       } else {
         Alert.alert("Error", data.detail || "Failed to change password.");
       }
@@ -97,7 +95,7 @@ export default function ChangePasswordScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={uiGoBack}>
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
 

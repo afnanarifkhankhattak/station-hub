@@ -389,7 +389,7 @@ const ServiceForm = ({
               
               {BIKE_CATEGORIES.map((cat) => (
                 <div key={cat.id} className="mb-4 last:mb-0">
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-start gap-2 mb-2">
                     <input
                       type="checkbox"
                       checked={!!form.categories?.[cat.id]}
@@ -402,10 +402,15 @@ const ServiceForm = ({
                         }
                         set("categories", categories);
                       }}
-                      className="accent-orange-500"
+                      className="accent-orange-500 mt-1"
                       id={`cat-${cat.id}`}
                     />
-                    <label htmlFor={`cat-${cat.id}`} className="text-sm font-medium cursor-pointer">{cat.label}</label>
+                    <label htmlFor={`cat-${cat.id}`} className="cursor-pointer">
+                      <span className="block text-sm font-medium">{cat.label}</span>
+                      <span className={`block text-[11px] mt-0.5 ${D ? "text-gray-500" : "text-gray-400"}`}>
+                        {cat.example}
+                      </span>
+                    </label>
                   </div>
 
                   {form.categories?.[cat.id] && <div className="ml-6 mt-2 max-w-xs">
@@ -560,9 +565,21 @@ const CAR_CATEGORIES = [
 ];
 
 const BIKE_CATEGORIES = [
-  { id: "economy_bike", label: "Economy Bikes (e.g. Honda CD 70, Scooties)" },
-  { id: "standard_bike", label: "Standard Bikes (e.g. Honda CG 125)" },
-  { id: "premium_bike", label: "Premium Bikes (Heavy Bikes)" },
+  {
+    id: "economy_bike",
+    label: "Economy",
+    example: "e.g., Honda CD 70, CG 125, United US 100",
+  },
+  {
+    id: "standard_bike",
+    label: "Standard",
+    example: "e.g., Yamaha YBR 125, Honda CB 125F",
+  },
+  {
+    id: "premium_bike",
+    label: "Premium",
+    example: "e.g., Honda CB 150F, Benelli 150i",
+  },
 ];
 
 const CATEGORY_LABELS = Object.fromEntries(

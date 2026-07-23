@@ -25,6 +25,8 @@ import * as Location from "expo-location";
 import { API_BASE } from "../../../src/config";
 import { useUser } from "../../../context/userContext";
 import { apiFetch } from "../../../src/api";
+import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
+import { uiGoBack } from "@/utils/uiGoBack";
 
 
 /* ────────────────────────────────────────────────────────────
@@ -77,9 +79,21 @@ const CAR_CATEGORIES = [
 ] as const;
 
 const BIKE_CATEGORIES = [
-  { id: "economy_bike", label: "Economy Bikes" },
-  { id: "standard_bike", label: "Standard Bikes" },
-  { id: "premium_bike", label: "Premium Bikes" },
+  {
+    id: "economy_bike",
+    label: "Economy",
+    example: "e.g., Honda CD 70, CG 125, United US 100",
+  },
+  {
+    id: "standard_bike",
+    label: "Standard",
+    example: "e.g., Yamaha YBR 125, Honda CB 125F",
+  },
+  {
+    id: "premium_bike",
+    label: "Premium",
+    example: "e.g., Honda CB 150F, Benelli 150i",
+  },
 ] as const;
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
@@ -183,6 +197,9 @@ export default function BookingScreen() {
     service_id?: string;
     station_ids?: string;
   }>();
+
+  // Hardware back: pop if opened from a flow, else double-press to exit.
+  useHardwareDoubleBackToExit();
 
   /* ── Stations ─────────────────────────────────────────── */
   const [allStations, setAllStations] = useState<Station[]>([]);
@@ -497,6 +514,7 @@ export default function BookingScreen() {
   const handleVehicleTypeChange = (type: "Car" | "Motorbike") => {
     setVehicleType(type);
     setVehicleCategory(type === "Car" ? "sedan" : "economy_bike");
+    setVehicleBrand("");
   };
 
   const basePrice = React.useMemo(() => {
@@ -594,7 +612,7 @@ export default function BookingScreen() {
         <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
           {/* HEADER */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={() => router.back()} hitSlop={10}>
+            <TouchableOpacity onPress={uiGoBack} hitSlop={10}>
               <Ionicons name="arrow-back" size={22} color="#000" />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Book Your Wash</Text>
@@ -890,29 +908,72 @@ export default function BookingScreen() {
             <Text style={{ fontSize: 13, fontWeight: "600", marginBottom: 8, color: "#444" }}>
               {vehicleType === "Car" ? "Car Category" : "Bike Category"}
             </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row" }}>
-              {(vehicleType === "Car" ? CAR_CATEGORIES : BIKE_CATEGORIES).map((cat) => (
-                <TouchableOpacity
-                  key={cat.id}
-                  onPress={() => setVehicleCategory(cat.id)}
-                  style={{
-                    paddingHorizontal: 14,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    backgroundColor: vehicleCategory === cat.id ? "#FF7A00" : "#f0f0f0",
-                    marginRight: 8,
-                  }}
-                >
-                  <Text style={{
-                    fontSize: 12,
-                    fontWeight: "600",
-                    color: vehicleCategory === cat.id ? "#fff" : "#444",
-                  }}>
-                    {cat.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+            {vehicleType === "Car" ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: "row" }}>
+                {CAR_CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat.id}
+                    onPress={() => setVehicleCategory(cat.id)}
+                    style={{
+                      paddingHorizontal: 14,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: vehicleCategory === cat.id ? "#FF7A00" : "#f0f0f0",
+                      marginRight: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "600",
+                        color: vehicleCategory === cat.id ? "#fff" : "#444",
+                      }}
+                    >
+                      {cat.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={{ gap: 8 }}>
+                {BIKE_CATEGORIES.map((cat) => {
+                  const selected = vehicleCategory === cat.id;
+                  return (
+                    <TouchableOpacity
+                      key={cat.id}
+                      onPress={() => setVehicleCategory(cat.id)}
+                      style={{
+                        paddingHorizontal: 14,
+                        paddingVertical: 10,
+                        borderRadius: 12,
+                        backgroundColor: selected ? "#FF7A00" : "#f0f0f0",
+                        borderWidth: selected ? 0 : 1,
+                        borderColor: "#e8e8e8",
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          fontWeight: "700",
+                          color: selected ? "#fff" : "#222",
+                        }}
+                      >
+                        {cat.label}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 11,
+                          marginTop: 2,
+                          color: selected ? "rgba(255,255,255,0.85)" : "#888",
+                        }}
+                      >
+                        {cat.example}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
           </View>
 
           {/* INPUTS */}

@@ -10,7 +10,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 import { apiFetch } from "../../../src/api";
@@ -51,7 +51,6 @@ const STATUS_STYLES: Record<
 };
 
 export default function NotificationsScreen() {
-  const router = useRouter();
   const [activeTab, setActiveTab] = useState("unread");
 
   const [bookings, setBookings] = useState<any[]>([]);
@@ -156,7 +155,7 @@ export default function NotificationsScreen() {
         {/* HEADER */}
         <View style={styles.header}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={uiGoBack}
             style={styles.backBtn}
           >
             <Ionicons name="arrow-back" size={22} color="#000" />

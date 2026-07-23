@@ -4,18 +4,56 @@ import { router, usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 
+type TabDef = {
+  label: string;
+  icon: string;
+  key: string;
+  route: string;
+};
+
+const tabs: TabDef[] = [
+  { label: "Home", icon: "home", key: "Home", route: "/Home/home" },
+  { label: "Booking", icon: "calendar", key: "Booking", route: "/Booking/booking" },
+  {
+    label: "MY Booking",
+    icon: "clipboard",
+    key: "bookingHistory",
+    route: "/profile/bookingHistory/bookinghistory",
+  },
+  { label: "Services", icon: "construct", key: "service", route: "/service/index" },
+  { label: "Profile", icon: "person", key: "profile", route: "/profile" },
+];
+
+function isTabActive(key: string, pathname: string): boolean {
+  const path = pathname || "";
+
+  switch (key) {
+    case "Home":
+      return path.includes("/Home");
+    case "Booking":
+      // Avoid matching "bookingHistory" under profile
+      return path.includes("/Booking");
+    case "bookingHistory":
+      return path.includes("bookingHistory");
+    case "service":
+      return path.includes("/service");
+    case "profile":
+      // Profile stack, but not My Booking (also under /profile)
+      return path.includes("/profile") && !path.includes("bookingHistory");
+    default:
+      return false;
+  }
+}
+
 export default function BottomNav() {
   const pathname = usePathname();
 
-  const isActive = (key: string) => pathname.includes(key);
-
-  const tabs = [
-    { label: "Home", icon: "home", key: "Home", route: "/Home/home" },
-    { label: "Booking", icon: "calendar", key: "Booking", route: "/Booking/booking" },
-    { label: "MY Booking", icon: "clipboard", key: "bookingHistory", route: "/profile/bookingHistory/bookinghistory" },
-    { label: "Services", icon: "construct", key: "service", route: "/service/index" },
-    { label: "Profile", icon: "person", key: "profile", route: "/profile" },
-  ];
+  const handlePress = (tab: TabDef) => {
+    if (isTabActive(tab.key, pathname)) {
+      return;
+    }
+    router.replace(tab.route as any);
+  };
 
   return (
     <LinearGradient
@@ -25,19 +63,22 @@ export default function BottomNav() {
       style={styles.container}
     >
       {tabs.map((tab) => {
-        const active = isActive(tab.key);
+        const active = isTabActive(tab.key, pathname);
         return (
           <TouchableOpacity
             key={tab.label}
             style={styles.item}
-            onPress={() => router.replace(tab.route as any)}
+            onPress={() => handlePress(tab)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
+            accessibilityLabel={tab.label}
           >
             <View style={[styles.iconWrap, active && styles.activeIconWrap]}>
               <Ionicons
-  name={tab.icon as any}
-  size={22}
-  color={active ? "#000000" : "#FFFFFF"}
-/>
+                name={tab.icon as any}
+                size={22}
+                color={active ? "#000000" : "#FFFFFF"}
+              />
             </View>
             <Text style={[styles.text, active && styles.activeText]}>
               {tab.label}
@@ -51,10 +92,10 @@ export default function BottomNav() {
 
 const styles = StyleSheet.create({
   container: {
-  position: "absolute",
-  bottom: 0,
-  left: 0,
-  right: 0,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
     height: 75,
     flexDirection: "row",
     justifyContent: "space-around",
@@ -83,9 +124,9 @@ const styles = StyleSheet.create({
   },
 
   activeIconWrap: {
-  width: 42,
-  height: 28,
-},
+    width: 42,
+    height: 28,
+  },
 
   text: {
     marginTop: 3,
@@ -95,8 +136,8 @@ const styles = StyleSheet.create({
   },
 
   activeText: {
-  color: "#000000",
-  opacity: 1,
-  fontWeight: "700",
-},
+    color: "#000000",
+    opacity: 1,
+    fontWeight: "700",
+  },
 });

@@ -15,6 +15,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decode } from "base-64";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import Bottomnav from "@/components/Bottomnav";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
@@ -191,7 +192,7 @@ export default function StationDetail() {
       {/* HEADER */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={uiGoBack}
           style={{
             position: "absolute",
             top: insets.top + 10,

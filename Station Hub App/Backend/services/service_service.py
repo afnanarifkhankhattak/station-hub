@@ -3,6 +3,87 @@ from config.firebase import db
 from schemas.service_schemas import ServiceRequest
 from datetime import datetime
 
+# Default catalog seeded once for each new station-owner account.
+_CAR_PRICE = 1000.0
+_BIKE_PRICE = 500.0
+
+_DEFAULT_CATEGORIES = {
+    "sedan": {"price": _CAR_PRICE},
+    "hatchback": {"price": _CAR_PRICE},
+    "suv": {"price": _CAR_PRICE},
+    "full_suv": {"price": _CAR_PRICE},
+    "pickup": {"price": _CAR_PRICE},
+    "economy_bike": {"price": _BIKE_PRICE},
+    "standard_bike": {"price": _BIKE_PRICE},
+    "premium_bike": {"price": _BIKE_PRICE},
+}
+
+DEFAULT_SERVICE_CATALOG = [
+    {
+        "name": "Wash",
+        "description": "Exterior wash for cars and bikes. Quick clean to refresh your vehicle.",
+        "image_url": "https://res.cloudinary.com/dqlmva24c/image/upload/v1784799014/stationhub/default_services/stationhub/default_services/wash.jpg",
+    },
+    {
+        "name": "Service",
+        "description": "General vehicle service and basic maintenance checks.",
+        "image_url": "https://res.cloudinary.com/dqlmva24c/image/upload/v1784799017/stationhub/default_services/stationhub/default_services/service.jpg",
+    },
+    {
+        "name": "Polishing",
+        "description": "Surface polishing to restore shine and reduce light scratches.",
+        "image_url": "https://res.cloudinary.com/dqlmva24c/image/upload/v1784799023/stationhub/default_services/stationhub/default_services/polishing.jpg",
+    },
+    {
+        "name": "Detailing",
+        "description": "Full detailing for a deep clean inside and out.",
+        "image_url": "https://res.cloudinary.com/dqlmva24c/image/upload/v1784799027/stationhub/default_services/stationhub/default_services/detailing.jpg",
+    },
+]
+
+
+def seed_default_services_for_owner(user_id: str) -> int:
+    """
+    Create the standard starter services for a newly registered owner.
+    Idempotent: skips if the owner already has any services.
+    Returns the number of services created.
+    """
+    existing = (
+        db.collection("services")
+        .where("owner_id", "==", user_id)
+        .limit(1)
+        .get()
+    )
+    if existing:
+        return 0
+
+    now = datetime.utcnow().isoformat()
+    batch = db.batch()
+    created = 0
+
+    for item in DEFAULT_SERVICE_CATALOG:
+        ref = db.collection("services").document()
+        batch.set(
+            ref,
+            {
+                "name": item["name"],
+                "description": item["description"],
+                "categories": {
+                    key: dict(value) for key, value in _DEFAULT_CATEGORIES.items()
+                },
+                "status": "Active",
+                "rating": None,
+                "image_url": item.get("image_url") or "",
+                "station_ids": [],
+                "owner_id": user_id,
+                "created_at": now,
+            },
+        )
+        created += 1
+
+    batch.commit()
+    return created
+
 
 def get_all_services(user_id: str) -> dict:
     docs = (

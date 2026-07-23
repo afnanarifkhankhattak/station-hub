@@ -13,10 +13,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../context/userContext";
+import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
+import { uiGoBack } from "@/utils/uiGoBack";
 
 type TabType = "basic" | "premium" | "addons";
 
 export default function ServicesScreen() {
+  useHardwareDoubleBackToExit();
   const router = useRouter();
   const { user } = useUser();
   const [activeTab, setActiveTab] = useState<TabType>("premium");
@@ -39,7 +42,7 @@ export default function ServicesScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={uiGoBack}>
             <Ionicons name="arrow-back" size={22} color="#000" />
           </TouchableOpacity>
 

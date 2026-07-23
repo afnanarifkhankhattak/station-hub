@@ -8,6 +8,9 @@ export default function TabLayout() {
     <UserProvider>
       <Tabs
       initialRouteName="Home/home"
+      // Hardware back is handled per root screen (double-press exit).
+      // Do not jump between tabs on Android back.
+      backBehavior="none"
       screenOptions={{
         headerShown: false,
         tabBarStyle: {

@@ -732,9 +732,9 @@ const Settings = () => {
                                     suv: "SUV/Crossover",
                                     full_suv: "Full SUV",
                                     pickup: "Pickup",
-                                    economy_bike: "Economy Bikes",
-                                    standard_bike: "Standard Bikes",
-                                    premium_bike: "Premium Bikes",
+                                    economy_bike: "Economy",
+                                    standard_bike: "Standard",
+                                    premium_bike: "Premium",
                                   };
                                   if (catKeys.length > 0) {
                                     return catKeys.map(k => `${labels[k] || k.replace(/_/g, ' ')}: Rs ${cats[k]?.price ?? '—'}`).join(', ');

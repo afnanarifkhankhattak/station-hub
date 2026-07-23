@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useRouter, useLocalSearchParams } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
@@ -95,7 +96,7 @@ export default function BookingConfirmedScreen() {
       >
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={uiGoBack}>
           <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
 

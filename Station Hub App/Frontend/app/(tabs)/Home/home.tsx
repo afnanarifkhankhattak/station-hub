@@ -20,9 +20,13 @@ import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 import { useUser } from "../../../context/userContext";
 import { apiFetch } from "../../../src/api";
+import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
 
 
 export default function HomeScreen() {
+  // Hardware back only: double-press exits. Never open splash/auth again.
+  useHardwareDoubleBackToExit({ allowNavigateBack: false });
+
   const router = useRouter();
   const { user, loading } = useUser();
 

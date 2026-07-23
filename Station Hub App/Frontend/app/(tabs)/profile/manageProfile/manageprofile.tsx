@@ -11,7 +11,6 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,6 +19,7 @@ import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../../context/userContext";
 import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
 import { apiFetch } from "../../../../src/api";
+import { uiGoBack } from "@/utils/uiGoBack";
 
 
 const CLOUDINARY_CLOUD_NAME = "dqlmva24c";
@@ -44,7 +44,6 @@ async function uploadToCloudinary(uri: string) {
 }
 
 export default function ManageProfileScreen() {
-  const router = useRouter();
   const { user, loading: userLoading, updateUser } = useUser();
 
   const [name, setName] = useState("");
@@ -168,7 +167,7 @@ export default function ManageProfileScreen() {
       >
         {/* HEADER */}
         <View style={styles.header} >
-          <TouchableOpacity onPress={() => router.push("/profile")} >
+          <TouchableOpacity onPress={uiGoBack}>
             <Ionicons
               name="arrow-back"
               size={24}

@@ -8,7 +8,7 @@ import {
   Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
@@ -39,8 +39,6 @@ const FEATURES = [
 ];
 
 export default function AboutAppScreen() {
-  const router = useRouter();
-
   return (
     <SafeAreaView style={styles.container}>
       {/* TOP GRADIENT */}
@@ -55,7 +53,7 @@ export default function AboutAppScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={uiGoBack}>
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
 

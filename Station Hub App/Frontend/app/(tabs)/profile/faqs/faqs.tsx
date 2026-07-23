@@ -10,7 +10,7 @@ import {
   UIManager,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import Bottomnav from "@/components/Bottomnav";
@@ -68,7 +68,6 @@ const FAQ_DATA = [
 ];
 
 export default function FaqsScreen() {
-  const router = useRouter();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const toggleExpand = (id: string) => {
@@ -96,7 +95,7 @@ export default function FaqsScreen() {
       >
         {/* HEADER */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()}>
+          <TouchableOpacity onPress={uiGoBack}>
             <Ionicons name="arrow-back" size={24} color="#1A1A1A" />
           </TouchableOpacity>
 

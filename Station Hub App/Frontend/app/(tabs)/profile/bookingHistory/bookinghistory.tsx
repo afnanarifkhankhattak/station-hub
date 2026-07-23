@@ -12,12 +12,13 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
 import { apiFetch } from "../../../../src/api";
 import { useBookingEvents } from "../../../../context/bookingEventsContext";
 import Bottomnav from "@/components/Bottomnav";
+import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
+import { uiGoBack } from "@/utils/uiGoBack";
 
 
 const TAB_STATUS_MAP: Record<string, string[]> = {
@@ -38,7 +39,7 @@ const STATUS_STYLES: Record<
 };
 
 export default function BookingHistoryScreen() {
-  const router = useRouter();
+  useHardwareDoubleBackToExit();
   const { latestEvent } = useBookingEvents();
   const [activeTab, setActiveTab] = useState("upcoming");
 
@@ -141,7 +142,7 @@ export default function BookingHistoryScreen() {
 
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={uiGoBack}>
           <Ionicons name="arrow-back" size={24} color="#000" />
         </TouchableOpacity>
 

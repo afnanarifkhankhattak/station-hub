@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { uiGoBack } from "@/utils/uiGoBack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 
@@ -32,7 +33,7 @@ export default function LogoutScreen() {
         <View style={styles.btnRow}>
           <TouchableOpacity
             style={styles.cancelBtn}
-            onPress={() => router.back()}
+            onPress={uiGoBack}
           >
             <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
