@@ -12,8 +12,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { uiGoBack } from "@/utils/uiGoBack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { API_BASE } from "../../../src/config";
 import { apiFetch } from "../../../src/api";
+import { loadBookings, writeBookingsCache } from "../../../src/loadBookings";
 
 
 const STATUS_STYLES: Record<
@@ -59,37 +60,13 @@ export default function NotificationsScreen() {
 
   const fetchBookings = async () => {
     setError("");
-    try {
-      const token = await AsyncStorage.getItem("token");
-
-      // show cached data instantly
-      const cached = await AsyncStorage.getItem("cached_notifications");
-      if (cached) {
-        setBookings(JSON.parse(cached));
-        setLoading(false);
-      }
-
-      // fetch fresh in background
-      const res = await apiFetch(`${API_BASE}/bookings/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setBookings(data.bookings || []);
-        AsyncStorage.setItem(
-          "cached_notifications",
-          JSON.stringify(data.bookings || []),
-        );
-      } else {
-        if (!cached) setError(data.detail || "Failed to load notifications");
-      }
-    } catch (e) {
-      if (!(await AsyncStorage.getItem("cached_notifications"))) {
-        setError("Cannot connect to server");
-      }
-    } finally {
+    const { bookings: next, error: err } = await loadBookings((cached) => {
+      setBookings(cached);
       setLoading(false);
-    }
+    });
+    setBookings(next);
+    setError(err);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -106,12 +83,11 @@ export default function NotificationsScreen() {
   const visible = activeTab === "unread" ? unread : read;
 
   const handleMarkRead = async (bookingId: string) => {
-    // optimistic update
     setBookings((prev) => {
       const updated = prev.map((b) =>
         b.id === bookingId ? { ...b, customer_read: true } : b,
       );
-      AsyncStorage.setItem("cached_notifications", JSON.stringify(updated)); // ← keep cache in sync
+      writeBookingsCache(updated);
       return updated;
     });
 
@@ -126,19 +102,16 @@ export default function NotificationsScreen() {
           const reverted = prev.map((b) =>
             b.id === bookingId ? { ...b, customer_read: false } : b,
           );
-          AsyncStorage.setItem(
-            "cached_notifications",
-            JSON.stringify(reverted),
-          );
+          writeBookingsCache(reverted);
           return reverted;
         });
       }
-    } catch (e) {
+    } catch {
       setBookings((prev) => {
         const reverted = prev.map((b) =>
           b.id === bookingId ? { ...b, customer_read: false } : b,
         );
-        AsyncStorage.setItem("cached_notifications", JSON.stringify(reverted));
+        writeBookingsCache(reverted);
         return reverted;
       });
     }

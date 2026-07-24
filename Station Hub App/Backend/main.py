@@ -4,7 +4,6 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from middleware.timing import TimingMiddleware
 
 from routes import auth
 from routes import profile
@@ -24,7 +23,6 @@ async def configure_booking_events():
     booking_event_manager.set_event_loop(asyncio.get_running_loop())
 
 app.add_middleware(GZipMiddleware, minimum_size=500)
-app.add_middleware(TimingMiddleware)
 
 # Comma-separated list, e.g.:
 # CORS_ORIGINS=http://localhost:5173,https://your-dashboard.onrender.com

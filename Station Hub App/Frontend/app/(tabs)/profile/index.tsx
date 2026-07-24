@@ -6,15 +6,16 @@ import {
   ScrollView,
   TouchableOpacity,
   Image,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Ionicons,
-  MaterialIcons,
   Feather,
 } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../context/userContext";
 import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
@@ -37,13 +38,6 @@ export default function ProfileSettingsScreen() {
 },
     {
       id: 2,
-      title: "Bookings",
-      subtitle: "View past bookings",
-      icon: <Feather name="clock" size={20} color="#FF7A45" />,
-      route: "/(tabs)/profile/bookingHistory/bookinghistory",
-    },
-    {
-      id: 3,
       title: "Change Password",
       subtitle: "Update your account password",
       icon: <Feather name="lock" size={20} color="#FF7A45" />,
@@ -160,16 +154,28 @@ source={user?.profile_image ? { uri: user.profile_image } : require("../../../as
 
         {/* LOGOUT */}
         <TouchableOpacity
-                    style={[styles.menuItem, styles.logoutItem]}
-                    onPress={() => router.push("/(tabs)/profile/logout/logout")}
-                  >
-                    <Ionicons name="log-out-outline" size={20} color="#FF0000" />
-                    <View style={styles.menuText}>
-                      <Text style={[styles.menuTitle, { color: "#FF0000" }]}>Logout</Text>
-                      <Text style={styles.menuSubtitle}>Sign out of your account</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color="#999" />
-                  </TouchableOpacity>
+          style={[styles.menuItem, styles.logoutItem]}
+          onPress={() =>
+            Alert.alert("Logout", "Are you sure you want to log out?", [
+              { text: "Cancel", style: "cancel" },
+              {
+                text: "Logout",
+                style: "destructive",
+                onPress: async () => {
+                  await AsyncStorage.clear();
+                  router.replace("/(auth)/login");
+                },
+              },
+            ])
+          }
+        >
+          <Ionicons name="log-out-outline" size={20} color="#FF0000" />
+          <View style={styles.menuText}>
+            <Text style={[styles.menuTitle, { color: "#FF0000" }]}>Logout</Text>
+            <Text style={styles.menuSubtitle}>Sign out of your account</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={20} color="#999" />
+        </TouchableOpacity>
       </ScrollView>
 
       <Bottomnav />

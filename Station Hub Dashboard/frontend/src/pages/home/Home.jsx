@@ -208,11 +208,6 @@ export default function HomeLayout() {
 
   const { dark } = useTheme();
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-  };
-
   // ── Theme tokens ──────────────────────────────────────
   const bg = dark ? "bg-[#0f1117]" : "bg-gray-100";
   const navbar = dark
@@ -387,12 +382,7 @@ export default function HomeLayout() {
       <UserMenuModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        onProfile={() => navigate("/profile")}
-        onSettings={() => navigate("/settings")}
-        onLogout={handleLogout}
         position={modalPosition}
-        // dark={dark}
-        // onDarkModeToggle={handleThemeToggle}
       />
     </div>
   );

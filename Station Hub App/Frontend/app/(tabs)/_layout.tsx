@@ -1,135 +1,28 @@
 import { Tabs } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
 import { UserProvider } from "../../context/userContext";
-
 
 export default function TabLayout() {
   return (
     <UserProvider>
       <Tabs
-      initialRouteName="Home/home"
-      // Hardware back is handled per root screen (double-press exit).
-      // Do not jump between tabs on Android back.
-      backBehavior="none"
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          display: "none",
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Home",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" size={size} color={color} />
-          ),
+        initialRouteName="Home/home"
+        // Hardware back is handled per root screen (double-press exit).
+        backBehavior="none"
+        screenOptions={{
+          headerShown: false,
+          tabBarStyle: { display: "none" },
         }}
-      />
-
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: "Explore",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="Booking/booking"
-        options={{
-          title: "Booking",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="Booking/bookingconfirm"
-        options={{
-          title: "Booking Confirm",
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="service/index"
-        options={{
-          title: "Services",
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="service/[type]"
-        options={{
-          title: "Service Details",
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" size={size} color={color} />
-          ),
-        }}
-      />
-
-      {/* <Tabs.Screen
-        name="profile/manageprofile"
-        options={{
-          title: "Manage Profile",
-          href: null,
-        }}
-      /> */}
-
-      {/* <Tabs.Screen
-        name="profile/bookinghistory"
-        options={{
-          title: "Booking History",
-          href: null,
-        }}
-      /> */}
-
-      {/* <Tabs.Screen
-        name="profile/profilesetting"
-        options={{
-          title: "Profile Settings",
-          href: null,
-        }}
-      /> */}
-
-      {/* <Tabs.Screen
-        name="profile/logout"
-        options={{
-          title: "Logout",
-          href: null,
-        }}
-      /> */}
-
-      <Tabs.Screen
-        name="Home/home"
-        options={{
-          title: "Home Detail",
-          href: null,
-        }}
-      />
-
-      <Tabs.Screen
-        name="Home/stationdetail"
-        options={{
-          title: "Station Detail",
-          href: null,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen name="Booking/booking" options={{ title: "Booking" }} />
+        <Tabs.Screen name="Booking/bookingconfirm" options={{ href: null }} />
+        <Tabs.Screen name="service/index" options={{ href: null }} />
+        <Tabs.Screen name="service/[type]" options={{ href: null }} />
+        <Tabs.Screen name="profile" options={{ title: "Profile" }} />
+        <Tabs.Screen name="Home/home" options={{ href: null }} />
+        <Tabs.Screen name="Home/stationdetail" options={{ href: null }} />
+        <Tabs.Screen name="Home/notifications" options={{ href: null }} />
+      </Tabs>
     </UserProvider>
   );
 }

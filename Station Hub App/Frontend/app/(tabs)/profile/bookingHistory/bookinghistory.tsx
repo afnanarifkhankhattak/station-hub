@@ -13,8 +13,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE } from "../../../../src/config"; // adjust relative path as needed
+import { API_BASE } from "../../../../src/config";
 import { apiFetch } from "../../../../src/api";
+import { loadBookings, writeBookingsCache } from "../../../../src/loadBookings";
 import { useBookingEvents } from "../../../../context/bookingEventsContext";
 import Bottomnav from "@/components/Bottomnav";
 import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
@@ -48,43 +49,17 @@ export default function BookingHistoryScreen() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const fetchBookings = async () => {
+    (async () => {
       setLoading(true);
       setError("");
-      try {
-        const token = await AsyncStorage.getItem("token");
-
-        // show cached data instantly
-        const cached = await AsyncStorage.getItem("cached_bookings");
-        if (cached) {
-          setBookings(JSON.parse(cached));
-          setLoading(false); // stop spinner, show cached data
-        }
-
-        // fetch fresh in background
-        const res = await apiFetch(`${API_BASE}/bookings/`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const data = await res.json();
-        if (res.ok) {
-          setBookings(data.bookings || []);
-          AsyncStorage.setItem(
-            "cached_bookings",
-            JSON.stringify(data.bookings || []),
-          );
-        } else {
-          if (!cached) setError(data.detail || "Failed to load bookings");
-        }
-      } catch (e) {
-        if (!(await AsyncStorage.getItem("cached_bookings"))) {
-          setError("Cannot connect to server");
-        }
-      } finally {
+      const { bookings: next, error: err } = await loadBookings((cached) => {
+        setBookings(cached);
         setLoading(false);
-      }
-    };
-
-    fetchBookings();
+      });
+      setBookings(next);
+      setError(err);
+      setLoading(false);
+    })();
   }, []);
 
   useEffect(() => {
@@ -95,7 +70,7 @@ export default function BookingHistoryScreen() {
           ? { ...booking, status: latestEvent.new_status }
           : booking,
       );
-      AsyncStorage.setItem("cached_bookings", JSON.stringify(updated));
+      writeBookingsCache(updated);
       return updated;
     });
   }, [latestEvent]);
@@ -120,11 +95,13 @@ export default function BookingHistoryScreen() {
             const data = await res.json();
 
             if (res.ok) {
-              setBookings((prev) =>
-                prev.map((b) =>
+              setBookings((prev) => {
+                const updated = prev.map((b) =>
                   b.id === bookingId ? { ...b, status: "cancelled" } : b,
-                ),
-              );
+                );
+                writeBookingsCache(updated);
+                return updated;
+              });
             } else {
               Alert.alert("Error", data.detail || "Failed to cancel booking");
             }
