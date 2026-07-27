@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
+  FlatList,
   TouchableOpacity,
   Image,
   Alert,
@@ -155,127 +155,116 @@ export default function BookingHistoryScreen() {
         ))}
       </View>
 
-      {/* LIST */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 90 }}>
-        {loading ? (
-          <View style={{ marginTop: 60, alignItems: "center" }}>
-            <ActivityIndicator color="#FF7A45" size="large" />
-          </View>
-        ) : error ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>{error}</Text>
-          </View>
-        ) : filteredData.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons
-              name={
-                activeTab === "completed"
-                  ? "checkmark-circle-outline"
+      <FlatList
+        data={loading || error ? [] : filteredData}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={{ paddingBottom: 90, flexGrow: 1 }}
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={5}
+        removeClippedSubviews
+        ListEmptyComponent={
+          loading ? (
+            <View style={{ marginTop: 60, alignItems: "center" }}>
+              <ActivityIndicator color="#FF7A45" size="large" />
+            </View>
+          ) : error ? (
+            <View style={styles.empty}>
+              <Text style={styles.emptyTitle}>{error}</Text>
+            </View>
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons
+                name={
+                  activeTab === "completed"
+                    ? "checkmark-circle-outline"
+                    : activeTab === "closed"
+                      ? "close-circle-outline"
+                      : "time-outline"
+                }
+                size={60}
+                color="#FF7A45"
+              />
+              <Text style={styles.emptyTitle}>
+                {activeTab === "completed"
+                  ? "No completed bookings yet"
                   : activeTab === "closed"
-                    ? "close-circle-outline"
-                    : "time-outline"
-              }
-              size={60}
-              color="#FF7A45"
-            />
-
-            <Text style={styles.emptyTitle}>
-              {activeTab === "completed"
-                ? "No completed bookings yet"
-                : activeTab === "closed"
-                  ? "No cancelled or rejected bookings"
-                  : "No upcoming bookings yet"}
-            </Text>
-
-            <Text style={styles.emptySub}>
-              Your bookings will appear here once processed
-            </Text>
-          </View>
-        ) : (
-          filteredData.map((item) => {
-            const statusStyle = STATUS_STYLES[item.status] || {
-              bg: "#F3F4F6",
-              text: "#6B7280",
-              label: item.status,
-            };
-
-            return (
-              <View key={item.id} style={styles.card}>
-                {item.service_image ? (
-                  <Image
-                    source={{ uri: item.service_image }}
-                    style={styles.cardImage}
-                  />
-                ) : (
-                  <Image
-                    source={require("../../../../assets/images/booking.png")}
-                    style={styles.cardImage}
-                  />
-                )}
-
-                <View style={{ flex: 1, marginLeft: 10 }}>
-                  <Text style={styles.service}>
-                    {item.service_name || "Service"}
+                    ? "No cancelled or rejected bookings"
+                    : "No upcoming bookings yet"}
+              </Text>
+              <Text style={styles.emptySub}>
+                Your bookings will appear here once processed
+              </Text>
+            </View>
+          )
+        }
+        renderItem={({ item }) => {
+          const statusStyle = STATUS_STYLES[item.status] || {
+            bg: "#F3F4F6",
+            text: "#6B7280",
+            label: item.status,
+          };
+          return (
+            <View style={styles.card}>
+              <Image
+                source={
+                  item.service_image
+                    ? { uri: item.service_image }
+                    : require("../../../../assets/images/booking.png")
+                }
+                style={styles.cardImage}
+              />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={styles.service}>
+                  {item.service_name || "Service"}
+                </Text>
+                <Text style={styles.shop}>{item.station_name}</Text>
+                <View style={styles.row}>
+                  <Ionicons name="car-outline" size={14} color="#6B7280" />
+                  <Text style={styles.text}>
+                    {item.vehicle_brand}
+                    {item.vehicle_number ? `, ${item.vehicle_number}` : ""}
                   </Text>
-                  <Text style={styles.shop}>{item.station_name}</Text>
-
-                  <View style={styles.row}>
-                    <Ionicons name="car-outline" size={14} color="#6B7280" />
-                    <Text style={styles.text}>
-                      {item.vehicle_brand}{" "}
-                      {item.vehicle_number ? `, ${item.vehicle_number}` : ""}
-                    </Text>
-                  </View>
-
-                  <View style={styles.row}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={14}
-                      color="#6B7280"
-                    />
-                    <Text style={styles.text}>
-                      {item.travel_date} • {item.travel_time}
-                    </Text>
-                  </View>
-
-                  {item.price != null && (
-                    <Text style={styles.price}>
-                      Total Payment $ {item.price}
-                    </Text>
-                  )}
-
-                  <View style={styles.bottomRow}>
-                    <View
+                </View>
+                <View style={styles.row}>
+                  <Ionicons name="calendar-outline" size={14} color="#6B7280" />
+                  <Text style={styles.text}>
+                    {item.travel_date} • {item.travel_time}
+                  </Text>
+                </View>
+                {item.price != null && (
+                  <Text style={styles.price}>Total Payment $ {item.price}</Text>
+                )}
+                <View style={styles.bottomRow}>
+                  <View
+                    style={[
+                      styles.statusCapsule,
+                      { backgroundColor: statusStyle.bg },
+                    ]}
+                  >
+                    <Text
                       style={[
-                        styles.statusCapsule,
-                        { backgroundColor: statusStyle.bg },
+                        styles.statusCapsuleText,
+                        { color: statusStyle.text },
                       ]}
                     >
-                      <Text
-                        style={[
-                          styles.statusCapsuleText,
-                          { color: statusStyle.text },
-                        ]}
-                      >
-                        {statusStyle.label}
-                      </Text>
-                    </View>
-
-                    {activeTab === "upcoming" && (
-                      <TouchableOpacity
-                        style={styles.cancelBtn}
-                        onPress={() => handleCancel(item.id)}
-                      >
-                        <Text style={styles.cancelText}>Cancel</Text>
-                      </TouchableOpacity>
-                    )}
+                      {statusStyle.label}
+                    </Text>
                   </View>
+                  {activeTab === "upcoming" && (
+                    <TouchableOpacity
+                      style={styles.cancelBtn}
+                      onPress={() => handleCancel(item.id)}
+                    >
+                      <Text style={styles.cancelText}>Cancel</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
-            );
-          })
-        )}
-      </ScrollView>
+            </View>
+          );
+        }}
+      />
       <Bottomnav />
     </SafeAreaView>
   );

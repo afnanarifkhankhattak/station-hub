@@ -14,6 +14,7 @@ export default function TabLayout() {
         }}
       >
         <Tabs.Screen name="index" options={{ title: "Home" }} />
+        <Tabs.Screen name="explore/explore" options={{ href: null }} />
         <Tabs.Screen name="Booking/booking" options={{ title: "Booking" }} />
         <Tabs.Screen name="Booking/bookingconfirm" options={{ href: null }} />
         <Tabs.Screen name="service/index" options={{ href: null }} />

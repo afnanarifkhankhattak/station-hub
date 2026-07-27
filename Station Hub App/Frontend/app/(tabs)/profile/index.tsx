@@ -19,6 +19,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Bottomnav from "@/components/Bottomnav";
 import { useUser } from "../../../context/userContext";
 import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
+import { clearAuthTokens } from "../../../src/api";
+import { clearBookingsCache } from "../../../src/loadBookings";
 
 
 export default function ProfileSettingsScreen() {
@@ -162,6 +164,8 @@ source={user?.profile_image ? { uri: user.profile_image } : require("../../../as
                 text: "Logout",
                 style: "destructive",
                 onPress: async () => {
+                  clearBookingsCache();
+                  await clearAuthTokens();
                   await AsyncStorage.clear();
                   router.replace("/(auth)/login");
                 },

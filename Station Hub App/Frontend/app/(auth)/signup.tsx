@@ -16,7 +16,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { API_BASE } from "../../src/config";
-import { apiFetch } from "../../src/api";
+import { apiFetch, setAuthTokens } from "../../src/api";
 
 
 export default function SignupScreen() {
@@ -73,16 +73,14 @@ const showError = (message: string) => {
       });
       const data = await response.json();
       if (response.ok) {
-        await AsyncStorage.setItem("token", data.token);
-        await AsyncStorage.setItem("refresh_token", data.refresh_token);
+        await setAuthTokens(data.token, data.refresh_token);
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
         showToast("Account Created Successfully!");
       } else {
         showError(data.detail || "Signup failed");
       }
-    } catch (error) {
-      console.log("LOGIN ERROR DETAILS:", error);
-      // showError("Cannot connect to server");
+    } catch {
+      showError("Cannot connect to server");
     } finally {
       setLoading(false);
     }

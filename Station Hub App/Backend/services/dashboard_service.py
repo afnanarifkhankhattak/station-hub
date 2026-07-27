@@ -78,31 +78,86 @@ def _fetch_owner_stations(user_id: str) -> list:
     )
 
 
-def _fetch_bookings_chunk(station_ids_chunk: list) -> list:
-    return list(
-        db.collection("bookings")
-        .where("station_id", "in", station_ids_chunk)
-        .stream()
-    )
-
-
-def _fetch_bookings_for_stations(station_ids: list) -> list:
-    """Load bookings for station IDs, chunking `in` queries (max 30) and parallelizing chunks."""
-    if not station_ids:
-        return []
-
-    chunks = [
+def _station_chunks(station_ids: list) -> list:
+    return [
         station_ids[i : i + _FIRESTORE_IN_LIMIT]
         for i in range(0, len(station_ids), _FIRESTORE_IN_LIMIT)
     ]
-    if len(chunks) == 1:
-        return _fetch_bookings_chunk(chunks[0])
 
-    bookings_docs = []
-    futures = [_IO_POOL.submit(_fetch_bookings_chunk, chunk) for chunk in chunks]
+
+def _run_chunked(station_ids: list, fn) -> list:
+    """Run fn(chunk) over station_id chunks; parallel when >1 chunk."""
+    if not station_ids:
+        return []
+    chunks = _station_chunks(station_ids)
+    if len(chunks) == 1:
+        return fn(chunks[0])
+    out = []
+    futures = [_IO_POOL.submit(fn, c) for c in chunks]
     for fut in as_completed(futures):
-        bookings_docs.extend(fut.result())
-    return bookings_docs
+        out.extend(fut.result())
+    return out
+
+
+def _docs_to_bookings(docs) -> list:
+    return [{"id": d.id, **(d.to_dict() or {})} for d in docs]
+
+
+def _fetch_by_status(station_ids: list, status: str) -> list:
+    def q(chunk):
+        return _docs_to_bookings(
+            db.collection("bookings")
+            .where("station_id", "in", chunk)
+            .where("status", "==", status)
+            .stream()
+        )
+    return _run_chunked(station_ids, q)
+
+
+def _count_bookings(station_ids: list) -> int:
+    def q(chunk):
+        return [
+            int(
+                db.collection("bookings")
+                .where("station_id", "in", chunk)
+                .count()
+                .get()[0][0]
+                .value
+            )
+        ]
+    return sum(_run_chunked(station_ids, q))
+
+
+def _fetch_completed_on_date(station_ids: list, day: str) -> list:
+    def q(chunk):
+        return _docs_to_bookings(
+            db.collection("bookings")
+            .where("station_id", "in", chunk)
+            .where("status", "==", "completed")
+            .where("travel_date", "==", day)
+            .stream()
+        )
+    return _run_chunked(station_ids, q)
+
+
+def _fetch_recent(station_ids: list, limit: int = 10) -> list:
+    def q(chunk):
+        return _docs_to_bookings(
+            db.collection("bookings")
+            .where("station_id", "in", chunk)
+            .order_by("created_at", direction="DESCENDING")
+            .limit(limit)
+            .stream()
+        )
+    merged = _run_chunked(station_ids, q)
+    merged.sort(key=lambda b: b.get("created_at", ""), reverse=True)
+    return merged[:limit]
+
+
+# Short TTL so rapid dashboard refreshes don't re-hit Firestore.
+_DASH_TTL = 15.0
+_dash_lock = threading.Lock()
+_dash_cache: dict = {}
 
 
 def _batch_get_users_and_services(user_ids: list, service_ids: list) -> tuple:
@@ -127,21 +182,18 @@ def _batch_get_users_and_services(user_ids: list, service_ids: list) -> tuple:
 
 
 def get_dashboard_stats(user_id: str) -> dict:
-    """Dashboard stats with reduced Firestore round-trips.
+    """Dashboard stats — no full booking dump.
 
-    Latency strategy (no booking denormalization):
-      1. Global users count is owner-independent → 60s in-process TTL cache.
-      2. Parallelize only when it shortens the critical path without contending:
-         - cold user-count refresh runs beside the stations query
-         - multi-chunk booking `in` queries run in parallel
-      3. After bookings: one combined get_all(users + services). Skipped if
-         there are no booking ids to hydrate.
-      4. Empty owners: stations (+ cached count only) — no bookings/get_all.
+    Loads only: pending, confirmed, recent(10), completed-today; count() for totals.
+    15s per-owner TTL for rapid refresh.
     """
-    # Refresh user count beside stations only on cache miss (avoids a serial RTT).
-    count_is_warm = False
+    now = time.monotonic()
+    with _dash_lock:
+        hit = _dash_cache.get(user_id)
+        if hit and now < hit["exp"]:
+            return hit["data"]
+
     with _user_count_lock:
-        now = time.monotonic()
         count_is_warm = (
             _user_count_cache["value"] is not None
             and now < _user_count_cache["expires_at"]
@@ -155,14 +207,15 @@ def get_dashboard_stats(user_id: str) -> dict:
 
     stations_docs = _fetch_owner_stations(user_id)
     station_ids = [d.id for d in stations_docs]
-    station_names = {d.id: d.to_dict().get("name", "") for d in stations_docs}
+    station_names = {
+        d.id: (d.to_dict() or {}).get("name", "") for d in stations_docs
+    }
 
     if fut_count is not None:
         total_users = fut_count.result()
 
-    # Empty owner: stations + (possibly overlapping) global count only
     if not station_ids:
-        return {
+        empty = {
             "stats": {
                 "total_bookings": 0,
                 "total_stations": 0,
@@ -173,31 +226,29 @@ def get_dashboard_stats(user_id: str) -> dict:
             "confirmed_bookings": [],
             "recent_bookings": [],
         }
+        with _dash_lock:
+            _dash_cache[user_id] = {"data": empty, "exp": time.monotonic() + _DASH_TTL}
+        return empty
 
-    bookings_docs = _fetch_bookings_for_stations(station_ids)
-    bookings = [{"id": d.id, **d.to_dict()} for d in bookings_docs]
     today = datetime.utcnow().strftime("%Y-%m-%d")
 
-    pending = [b for b in bookings if b.get("status") == "pending"]
-    confirmed = [b for b in bookings if b.get("status") == "confirmed"]
-    sorted_bookings = sorted(
-        bookings, key=lambda b: b.get("created_at", ""), reverse=True
-    )
-    recent = sorted_bookings[:10]
-    earnings_related = [
-        b
-        for b in bookings
-        if b.get("status") == "completed"
-        and str(b.get("travel_date", "")).startswith(today)
-    ]
+    fut_pending = _IO_POOL.submit(_fetch_by_status, station_ids, "pending")
+    fut_confirmed = _IO_POOL.submit(_fetch_by_status, station_ids, "confirmed")
+    fut_recent = _IO_POOL.submit(_fetch_recent, station_ids, 10)
+    fut_earnings = _IO_POOL.submit(_fetch_completed_on_date, station_ids, today)
+    fut_total = _IO_POOL.submit(_count_bookings, station_ids)
 
-    # Hydrate only documents needed for visible rows + today's earnings pricing
+    pending = fut_pending.result()
+    confirmed = fut_confirmed.result()
+    recent = fut_recent.result()
+    earnings_related = fut_earnings.result()
+    total_bookings = fut_total.result()
+
     enrich_bookings = pending + confirmed + recent + earnings_related
     user_ids = list({b.get("user_id") for b in enrich_bookings if b.get("user_id")})
     service_ids = list(
         {b.get("service_id") for b in enrich_bookings if b.get("service_id")}
     )
-
     users_map, services_map = _batch_get_users_and_services(user_ids, service_ids)
 
     def _get_price_fast(b: dict) -> float:
@@ -231,19 +282,20 @@ def get_dashboard_stats(user_id: str) -> dict:
             "created_at": b.get("created_at", ""),
         }
 
-    todays_earnings = sum(_get_price_fast(b) for b in earnings_related)
-
-    return {
+    result = {
         "stats": {
-            "total_bookings": len(bookings),
+            "total_bookings": total_bookings,
             "total_stations": len(stations_docs),
             "total_users": total_users,
-            "todays_earnings": todays_earnings,
+            "todays_earnings": sum(_get_price_fast(b) for b in earnings_related),
         },
         "pending_bookings": [_fmt_fast(b) for b in pending],
         "confirmed_bookings": [_fmt_fast(b) for b in confirmed],
         "recent_bookings": [_fmt_fast(b) for b in recent],
     }
+    with _dash_lock:
+        _dash_cache[user_id] = {"data": result, "exp": time.monotonic() + _DASH_TTL}
+    return result
 
 
 def update_booking_status(booking_id: str, status: str) -> dict:
@@ -264,6 +316,9 @@ def update_booking_status(booking_id: str, status: str) -> dict:
 
     doc_ref.update({"status": status})
     event = booking_events.publish(booking.get("user_id", ""), booking_id, status)
+    # Bust short dashboard TTL for any cached owners (cheap full clear).
+    with _dash_lock:
+        _dash_cache.clear()
 
     # Send push notification to customer
     try:

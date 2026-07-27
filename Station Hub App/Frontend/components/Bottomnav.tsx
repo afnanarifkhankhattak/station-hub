@@ -13,6 +13,7 @@ type TabDef = {
 
 const tabs: TabDef[] = [
   { label: "Home", icon: "home", key: "Home", route: "/Home/home" },
+  { label: "Explore", icon: "compass", key: "explore", route: "/explore/explore" },
   { label: "Booking", icon: "calendar", key: "Booking", route: "/Booking/booking" },
   {
     label: "MY Booking",
@@ -30,6 +31,8 @@ function isTabActive(key: string, pathname: string): boolean {
   switch (key) {
     case "Home":
       return path.includes("/Home");
+    case "explore":
+      return path.includes("/explore");
     case "Booking":
       // Avoid matching "bookingHistory" under profile
       return path.includes("/Booking");

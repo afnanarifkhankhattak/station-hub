@@ -23,4 +23,3 @@ const getBaseUrl = () => {
 };
 
 export const API_BASE = getBaseUrl();
-console.log("API_BASE resolved to:", API_BASE);

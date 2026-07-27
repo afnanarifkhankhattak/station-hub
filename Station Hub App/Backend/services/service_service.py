@@ -130,14 +130,16 @@ def delete_service(service_id: str, user_id: str) -> dict:
     doc_ref.delete()
     return {"message": "Service deleted"}
 
-def get_public_services() -> dict:
+def get_public_services(limit: int = 50) -> dict:
+    limit = max(1, min(int(limit or 50), 100))
     docs = (
         db.collection("services")
         .where("status", "==", "Active")
         .order_by("created_at", direction="DESCENDING")
+        .limit(limit)
         .stream()
     )
-    services = [{"id": d.id, **d.to_dict()} for d in docs]
+    services = [{"id": d.id, **(d.to_dict() or {})} for d in docs]
     return {"services": services}
 
 

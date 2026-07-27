@@ -74,41 +74,34 @@ const fetchStations = async (cursor: string | null = null) => {
   }
 };
 
-  useEffect(() => {
-    fetchStations(null);
-  }, []);
-
   const loadMore = () => {
     if (!loadingStations && hasMore && nextCursor) {
       fetchStations(nextCursor);
     }
   };
 
-useEffect(() => {
-  const fetchUnreadCount = async () => {
-    try {
-      const token = await AsyncStorage.getItem("token");
-      if (!token) return;
-      const res = await apiFetch(`${API_BASE}/bookings/unread-count`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setUnreadCount(data.unread_count || 0);
-      }
-    } catch (e) {
-      // silently ignore
-    }
-  };
-  fetchUnreadCount();
-}, []);
-
   useEffect(() => {
-    const loadCity = async () => {
-      const city = await AsyncStorage.getItem("user_city");
+    let cancelled = false;
+    (async () => {
+      fetchStations(null);
+      const [city, token] = await Promise.all([
+        AsyncStorage.getItem("user_city"),
+        AsyncStorage.getItem("token"),
+      ]);
+      if (cancelled) return;
       if (city) setUserCity(city);
+      if (!token) return;
+      try {
+        const res = await apiFetch(`${API_BASE}/bookings/unread-count`);
+        const data = await res.json();
+        if (!cancelled && res.ok) setUnreadCount(data.unread_count || 0);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => {
+      cancelled = true;
     };
-    loadCity();
   }, []);
 
   const sortOptions = [

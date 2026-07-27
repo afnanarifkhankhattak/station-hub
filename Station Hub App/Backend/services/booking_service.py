@@ -93,14 +93,22 @@ def create_booking(body: BookingRequest, user_id: str) -> dict:
     }
 
 def get_unread_count(user_id: str) -> dict:
-    docs = (db.collection("bookings")
+    """Count unread non-pending bookings via aggregation (no doc stream)."""
+    base = (
+        db.collection("bookings")
         .where("user_id", "==", user_id)
         .where("customer_read", "==", False)
-        .stream())
-    count = sum(1 for d in docs if d.to_dict().get("status") != "pending")
-    return {"unread_count": count}
+    )
+    total = int(base.count().get()[0][0].value)
+    if total == 0:
+        return {"unread_count": 0}
+    pending = int(
+        base.where("status", "==", "pending").count().get()[0][0].value
+    )
+    return {"unread_count": max(0, total - pending)}
 
-def get_my_bookings(user_id: str, limit: int = 100) -> dict:
+
+def get_my_bookings(user_id: str, limit: int = 50) -> dict:
     docs = (
         db.collection("bookings")
         .where("user_id", "==", user_id)
@@ -113,38 +121,30 @@ def get_my_bookings(user_id: str, limit: int = 100) -> dict:
     if not bookings:
         return {"bookings": []}
 
-    # Collect unique IDs
     station_ids = list({b["station_id"] for b in bookings if b.get("station_id")})
     service_ids = list({b["service_id"] for b in bookings if b.get("service_id")})
 
-    stations = {}
-    services = {}
-
-    # Bulk fetch all stations in ONE network request
-    if station_ids:
-        station_refs = [db.collection("stations").document(sid) for sid in station_ids]
-        for doc in db.get_all(station_refs):
-            if doc.exists:
+    refs = [db.collection("stations").document(sid) for sid in station_ids]
+    refs += [db.collection("services").document(sid) for sid in service_ids]
+    stations, services = {}, {}
+    if refs:
+        for doc in db.get_all(refs):
+            if not doc.exists:
+                continue
+            col = doc.reference.parent.id
+            if col == "stations":
                 stations[doc.id] = doc.to_dict()
-
-    # Bulk fetch all services in ONE network request
-    if service_ids:
-        service_refs = [db.collection("services").document(sid) for sid in service_ids]
-        for doc in db.get_all(service_refs):
-            if doc.exists:
+            else:
                 services[doc.id] = doc.to_dict()
 
-    # Enrich bookings (in-memory, instant)
     for b in bookings:
         station = stations.get(b.get("station_id"), {})
         service = services.get(b.get("service_id"), {})
-
         b["station_name"] = station.get("name", "")
         b["service_name"] = service.get("name", "")
         b["service_image"] = service.get("image_url", "")
         b["price"] = _resolve_price(service, b)
 
-    bookings.sort(key=lambda x: x.get("created_at", ""), reverse=True)
     return {"bookings": bookings}
 
 
@@ -195,19 +195,20 @@ def mark_booking_read(booking_id: str, user_id: str) -> dict:
 
 
 def get_booked_slots(station_id: str, date: str) -> list[str]:
-    excluded_statuses = {"cancelled", "rejected"}
-    docs = (db.collection("bookings")
+    excluded = {"cancelled", "rejected"}
+    docs = (
+        db.collection("bookings")
         .where("station_id", "==", station_id)
         .where("travel_date", "==", date)
-        .stream())
-    
+        .select(["travel_time", "status"])
+        .stream()
+    )
     slots = []
     for doc in docs:
-        data = doc.to_dict()
-        if data.get("status") in excluded_statuses:
+        data = doc.to_dict() or {}
+        if data.get("status") in excluded:
             continue
-        time = data.get("travel_time")
-        if time:
-            slots.append(time)
-    
+        t = data.get("travel_time")
+        if t:
+            slots.append(t)
     return slots

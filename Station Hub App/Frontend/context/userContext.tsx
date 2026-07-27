@@ -1,8 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_BASE } from "../src/config"; // adjust relative path as needed
+import { API_BASE } from "../src/config";
 import { apiFetch } from "../src/api";
-
 
 type UserProfile = {
   id: string;
@@ -11,7 +17,6 @@ type UserProfile = {
   phone?: string;
   profile_image?: string;
   agreed_to_privacy_policy?: boolean;
-  // ...other fields
 };
 
 type UserContextType = {
@@ -27,7 +32,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchUser = async () => {
+  const fetchUser = useCallback(async () => {
     try {
       const token = await AsyncStorage.getItem("token");
       if (!token) {
@@ -36,59 +41,50 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // show cached user instantly
       const cached = await AsyncStorage.getItem("cached_user");
       if (cached) {
         setUser(JSON.parse(cached));
-        setLoading(false); // stop spinner, show cached user immediately
+        setLoading(false);
       }
 
-      // fetch fresh in background
-      const res = await apiFetch(`${API_BASE}/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await apiFetch(`${API_BASE}/auth/me`);
       const data = await res.json();
       if (res.ok) {
         setUser(data.user);
         AsyncStorage.setItem("cached_user", JSON.stringify(data.user));
-      } else {
-        if (!cached) setUser(null);
-      }
-    } catch (e) {
-      if (!(await AsyncStorage.getItem("cached_user"))) {
+      } else if (!cached) {
         setUser(null);
       }
+    } catch {
+      if (!(await AsyncStorage.getItem("cached_user"))) setUser(null);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchUser();
-  }, []);
+  }, [fetchUser]);
 
-  const updateUser = (updates: Partial<UserProfile>) => {
+  const updateUser = useCallback((updates: Partial<UserProfile>) => {
     setUser((prev) => {
       if (!prev) return prev;
       const updated = { ...prev, ...updates };
-      AsyncStorage.setItem("cached_user", JSON.stringify(updated)); // ← keep cache in sync
+      AsyncStorage.setItem("cached_user", JSON.stringify(updated));
       return updated;
     });
-  };
+  }, []);
 
-  return (
-    <UserContext.Provider
-      value={{ user, loading, refreshUser: fetchUser, updateUser }}
-    >
-      {children}
-    </UserContext.Provider>
+  const value = useMemo(
+    () => ({ user, loading, refreshUser: fetchUser, updateUser }),
+    [user, loading, fetchUser, updateUser],
   );
+
+  return <UserContext.Provider value={value}>{children}</UserContext.Provider>;
 }
 
 export function useUser() {
   const ctx = useContext(UserContext);
-  if (!ctx) {
-    throw new Error("useUser must be used within a UserProvider");
-  }
+  if (!ctx) throw new Error("useUser must be used within a UserProvider");
   return ctx;
 }

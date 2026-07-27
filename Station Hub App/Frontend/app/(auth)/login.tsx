@@ -17,7 +17,7 @@ import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
 import * as AuthSession from "expo-auth-session";
 import { API_BASE } from "../../src/config";
-import { apiFetch } from "../../src/api";
+import { apiFetch, setAuthTokens } from "../../src/api";
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -62,15 +62,13 @@ export default function Login() {
       });
       const data = await response.json();
       if (response.ok) {
-        await AsyncStorage.setItem("token", data.token);
-        await AsyncStorage.setItem("refresh_token", data.refresh_token);
+        await setAuthTokens(data.token, data.refresh_token);
         await AsyncStorage.setItem("user", JSON.stringify(data.user));
         showToast("Success, Welcome Back!");
       } else {
         showError(data.detail || "Login failed");
       }
-    } catch (error) {
-      console.log("LOGIN ERROR DETAILS:", error);
+    } catch {
       showError("Cannot connect to server");
     } finally {
       setLoading(false);
@@ -81,8 +79,6 @@ export default function Login() {
     scheme: "stationhubapp",
     useProxy: true,
   } as any);
-
-  console.log("Google redirect URI:", redirectUri);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     androidClientId:

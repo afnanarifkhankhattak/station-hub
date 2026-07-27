@@ -11,7 +11,7 @@ router = APIRouter(prefix="/stations", tags=["Stations"])
 
 @router.get("/")
 def get_stations(current_user: dict = Depends(get_current_user)):
-    return station_service.get_all_stations()
+    return station_service.get_all_stations(current_user["sub"])
 
 @router.get("/public")
 def public_stations(limit: int = 20, cursor: str | None = None):
@@ -27,7 +27,7 @@ def public_station_detail(station_id: str):
 
 @router.get("/search")
 def search_stations(q: str = Query(..., min_length=1), current_user: dict = Depends(get_current_user)):
-    return station_service.search_stations(q)
+    return station_service.search_stations(q, current_user["sub"])
 
 
 @router.get("/{station_id}")

@@ -1,11 +1,10 @@
-
 from fastapi import HTTPException
 from config.firebase import db
 from datetime import datetime
+import threading
+import time
 
 # Fields safe to return to public mobile clients.
-# Notably excludes the 'ratings' map (which stores every user's individual
-# rating and can be massive) and internal fields like 'owner_id'.
 STATION_PUBLIC_FIELDS = {
     "id", "name", "address", "city", "image_url",
     "avg_rating", "rating_count", "booking_count",
@@ -13,32 +12,79 @@ STATION_PUBLIC_FIELDS = {
     "sun_off", "status", "created_at",
 }
 
+# ponytail: 60s active-station list cache; bump if station catalog changes faster
+_ACTIVE_TTL = 60.0
+_active_lock = threading.Lock()
+_active_cache = {"stations": None, "expires_at": 0.0}
+_count_cache = {"value": None, "expires_at": 0.0}
+
 
 def _public_station(doc) -> dict:
-    """Convert a Firestore doc to a public-safe station dict."""
-    data = doc.to_dict()
+    data = doc.to_dict() or {}
     data["id"] = doc.id
     return {k: v for k, v in data.items() if k in STATION_PUBLIC_FIELDS}
 
 
-def get_all_stations() -> dict:
-    docs = db.collection("stations").stream()
+def _load_active_public_stations() -> list:
+    docs = (
+        db.collection("stations")
+        .where("status", "==", "Active")
+        .select([f for f in STATION_PUBLIC_FIELDS if f != "id"])
+        .stream()
+    )
+    out = []
+    for doc in docs:
+        data = doc.to_dict() or {}
+        data["id"] = doc.id
+        out.append(data)
+    return out
+
+
+def _active_stations_cached() -> list:
+    now = time.monotonic()
+    with _active_lock:
+        if _active_cache["stations"] is not None and now < _active_cache["expires_at"]:
+            return _active_cache["stations"]
+    stations = _load_active_public_stations()
+    with _active_lock:
+        _active_cache["stations"] = stations
+        _active_cache["expires_at"] = time.monotonic() + _ACTIVE_TTL
+    return stations
+
+
+def get_all_stations(user_id: str | None = None) -> dict:
+    """Owner-scoped when user_id given — never dump the whole collection."""
+    if user_id:
+        docs = db.collection("stations").where("owner_id", "==", user_id).stream()
+    else:
+        docs = db.collection("stations").limit(100).stream()
     stations = []
     for doc in docs:
-        data = doc.to_dict()
+        data = doc.to_dict() or {}
         data["id"] = doc.id
         stations.append(data)
     return {"stations": stations}
 
 
 def get_public_stations(limit: int = 20, cursor: str | None = None) -> dict:
+    limit = max(1, min(int(limit or 20), 50))
     base_query = (
         db.collection("stations")
         .where("status", "==", "Active")
         .order_by("created_at", direction="DESCENDING")
     )
 
-    total = base_query.count().get()[0][0].value
+    now = time.monotonic()
+    with _active_lock:
+        if _count_cache["value"] is not None and now < _count_cache["expires_at"]:
+            total = _count_cache["value"]
+        else:
+            total = None
+    if total is None:
+        total = int(base_query.count().get()[0][0].value)
+        with _active_lock:
+            _count_cache["value"] = total
+            _count_cache["expires_at"] = time.monotonic() + _ACTIVE_TTL
 
     query = base_query
     if cursor:
@@ -54,33 +100,31 @@ def get_public_stations(limit: int = 20, cursor: str | None = None) -> dict:
 
 
 def public_search_stations(q: str) -> dict:
-    docs = (
-        db.collection("stations")
-        .where("status", "==", "Active")
-        .select(list(STATION_PUBLIC_FIELDS))
-        .stream()
-    )
-    results = []
-    ql = q.lower()
-    for doc in docs:
-        data = doc.to_dict()
-        data["id"] = doc.id
-        name = data.get("name", "").lower()
-        if ql in name:
-            results.append(data)
-    return {"stations": results}
+    ql = (q or "").strip().lower()
+    if not ql:
+        return {"stations": []}
+    # In-memory filter on 60s cached active list — avoids full Firestore scan per keystroke
+    matches = [
+        s for s in _active_stations_cached()
+        if ql in (s.get("name") or "").lower()
+    ][:30]
+    return {"stations": matches}
 
 
-def search_stations(q: str) -> dict:
-    docs = db.collection("stations").stream()
-    results = []
-    for doc in docs:
-        data = doc.to_dict()
-        data["id"] = doc.id
-        name = data.get("name", "").lower()
-        if q.lower() in name:
-            results.append(data)
-    return {"stations": results}
+def search_stations(q: str, user_id: str | None = None) -> dict:
+    ql = (q or "").strip().lower()
+    if not ql:
+        return {"stations": []}
+    if user_id:
+        docs = db.collection("stations").where("owner_id", "==", user_id).stream()
+        results = []
+        for doc in docs:
+            data = doc.to_dict() or {}
+            data["id"] = doc.id
+            if ql in (data.get("name") or "").lower():
+                results.append(data)
+        return {"stations": results[:30]}
+    return public_search_stations(q)
 
 
 def get_public_station_by_id(station_id: str) -> dict:
@@ -94,7 +138,7 @@ def get_station_by_id(station_id: str) -> dict:
     doc = db.collection("stations").document(station_id).get()
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Station not found")
-    data = doc.to_dict()
+    data = doc.to_dict() or {}
     data["id"] = doc.id
     return {"station": data}
 
@@ -104,7 +148,13 @@ def add_station(body, user_id: str) -> dict:
     data["owner_id"] = user_id
     data["created_at"] = datetime.utcnow().isoformat()
     doc_ref = db.collection("stations").add(data)
+    with _active_lock:
+        _active_cache["stations"] = None
+        _active_cache["expires_at"] = 0.0
+        _count_cache["value"] = None
+        _count_cache["expires_at"] = 0.0
     return {"message": "Station added", "id": doc_ref[1].id}
+
 
 def rate_station(station_id: str, user_id: str, rating: int) -> dict:
     if rating < 1 or rating > 5:
@@ -115,13 +165,9 @@ def rate_station(station_id: str, user_id: str, rating: int) -> dict:
     if not doc.exists:
         raise HTTPException(status_code=404, detail="Station not found")
 
-    data = doc.to_dict()
+    data = doc.to_dict() or {}
     ratings = data.get("ratings", {})
-    
-    # save user's rating
     ratings[user_id] = rating
-
-    # recalculate average
     avg = round(sum(ratings.values()) / len(ratings), 1)
     count = len(ratings)
 
