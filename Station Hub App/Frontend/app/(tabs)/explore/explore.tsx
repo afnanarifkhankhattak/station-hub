@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,151 +10,62 @@ import {
   Pressable,
   Platform,
   Dimensions,
+  TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import MapView, { Marker, Region } from "react-native-maps";
+import MapView from "@/components/Map";
+import type { Region } from "@/components/Map";
 import * as Location from "expo-location";
 import Bottomnav from "@/components/Bottomnav";
+import { API_BASE } from "../../../src/config";
 
-const SERVICE_OPTIONS = [
-  "Car Wash",
-  "Oil Change",
-  "Tire Care",
-  "Detailing",
-  "Battery",
-] as const;
-
-const LOCATION_OPTIONS = [
-  "Near me",
-  "Downtown",
-  "Riverside",
-  "Airport Road",
-  "Mall Area",
-] as const;
-
-type MockStation = {
+type Station = {
   id: string;
   name: string;
-  area: string;
+  address: string;
+  city: string;
+  image_url?: string;
+  avg_rating: number;
+  rating_count: number;
+  booking_count: number;
   latitude: number;
   longitude: number;
-  rating: number;
-  reviewCount: number;
-  minPrice: number;
-  popular: boolean;
-  services: string[];
+  opening?: string;
+  closing?: string;
+  sun_off?: boolean;
+  status: string;
+  created_at: string;
 };
 
-const DEMO_CENTER = { latitude: 31.5204, longitude: 74.3587 };
+type ServiceCategory = {
+  [vehicle: string]: { price: number };
+};
 
-const MOCK_STATIONS: MockStation[] = [
-  {
-    id: "s1",
-    name: "Station Hub Riverside",
-    area: "Riverside",
-    latitude: 31.5221,
-    longitude: 74.3512,
-    rating: 4.8,
-    reviewCount: 214,
-    minPrice: 800,
-    popular: true,
-    services: ["Car Wash", "Detailing", "Tire Care"],
-  },
-  {
-    id: "s2",
-    name: "QuickClean Express",
-    area: "Downtown",
-    latitude: 31.5158,
-    longitude: 74.342,
-    rating: 4.3,
-    reviewCount: 98,
-    minPrice: 500,
-    popular: true,
-    services: ["Car Wash", "Oil Change"],
-  },
-  {
-    id: "s3",
-    name: "Aero Auto Care",
-    area: "Airport Road",
-    latitude: 31.531,
-    longitude: 74.4035,
-    rating: 4.6,
-    reviewCount: 156,
-    minPrice: 1200,
-    popular: false,
-    services: ["Oil Change", "Battery", "Tire Care"],
-  },
-  {
-    id: "s4",
-    name: "Mall Sparkle Wash",
-    area: "Mall Area",
-    latitude: 31.5102,
-    longitude: 74.3655,
-    rating: 3.9,
-    reviewCount: 42,
-    minPrice: 400,
-    popular: false,
-    services: ["Car Wash"],
-  },
-  {
-    id: "s5",
-    name: "Premium Detailing Co.",
-    area: "Downtown",
-    latitude: 31.5189,
-    longitude: 74.3488,
-    rating: 4.9,
-    reviewCount: 301,
-    minPrice: 2500,
-    popular: true,
-    services: ["Detailing", "Car Wash", "Oil Change"],
-  },
-  {
-    id: "s6",
-    name: "Budget Lube Point",
-    area: "Riverside",
-    latitude: 31.5265,
-    longitude: 74.3601,
-    rating: 3.5,
-    reviewCount: 27,
-    minPrice: 350,
-    popular: false,
-    services: ["Oil Change", "Battery"],
-  },
-  {
-    id: "s7",
-    name: "City Tire & Wash",
-    area: "Mall Area",
-    latitude: 31.5055,
-    longitude: 74.372,
-    rating: 4.1,
-    reviewCount: 73,
-    minPrice: 600,
-    popular: false,
-    services: ["Tire Care", "Car Wash", "Battery"],
-  },
-  {
-    id: "s8",
-    name: "Airport Pro Station",
-    area: "Airport Road",
-    latitude: 31.5288,
-    longitude: 74.395,
-    rating: 4.4,
-    reviewCount: 119,
-    minPrice: 900,
-    popular: true,
-    services: ["Car Wash", "Oil Change", "Detailing", "Tire Care"],
-  },
-];
+type Service = {
+  id: string;
+  name: string;
+  categories: ServiceCategory;
+  description?: string;
+  status: string;
+  rating?: number;
+  image_url?: string;
+  station_ids: string[];
+  owner_id: string;
+  created_at: string;
+};
+
+
 
 type SortKey = "nearest" | "rating" | "price_asc" | "price_desc" | "popular";
 
 const SORT_LABELS: Record<SortKey, string> = {
   nearest: "Nearest",
   rating: "Top rated",
-  price_asc: "Price: low → high",
-  price_desc: "Price: high → low",
+  price_asc: "Price: low \u2192 high",
+  price_desc: "Price: high \u2192 low",
   popular: "Popular",
 };
 
@@ -178,44 +89,65 @@ function distanceKm(
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-function StationPin({ selected, popular }: { selected: boolean; popular?: boolean }) {
-  return (
-    <View style={styles.pinWrap}>
-      <View
-        style={[
-          styles.pinBody,
-          selected && styles.pinBodySelected,
-          popular && !selected && styles.pinBodyPopular,
-        ]}
-      >
-        <Ionicons
-          name="water"
-          size={selected ? 16 : 14}
-          color="#fff"
-        />
-      </View>
-      <View
-        style={[
-          styles.pinTip,
-          selected && styles.pinTipSelected,
-          popular && !selected && styles.pinTipPopular,
-        ]}
-      />
-    </View>
-  );
+function getMinPrice(stationId: string, services: Service[]): number | null {
+  const prices: number[] = [];
+  for (const svc of services) {
+    if (svc.station_ids.includes(stationId)) {
+      for (const cat of Object.values(svc.categories)) {
+        if (typeof cat.price === "number") prices.push(cat.price);
+      }
+    }
+  }
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
+function getStationServiceNames(
+  stationId: string,
+  services: Service[]
+): string[] {
+  return services
+    .filter((s) => s.station_ids.includes(stationId))
+    .map((s) => s.name);
+}
+
+function mapServiceToCategory(name: string): string {
+  const lower = name.toLowerCase();
+  if (lower.includes("wash")) return "Car Wash";
+  if (lower.includes("oil") || lower.includes("change")) return "Oil Change";
+  if (lower.includes("tire") || lower.includes("tyre")) return "Tire Care";
+  if (lower.includes("detail")) return "Detailing";
+  if (lower.includes("battery")) return "Battery";
+  return name;
 }
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<React.ElementRef<typeof MapView>>(null);
+
+  const [stations, setStations] = useState<Station[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [userCoords, setUserCoords] = useState<{
     latitude: number;
     longitude: number;
   } | null>(null);
 
+  const DEMO_CENTER = useMemo(
+    () =>
+      stations.length > 0
+        ? {
+            latitude: stations[0].latitude,
+            longitude: stations[0].longitude,
+          }
+        : { latitude: 33.6844, longitude: 73.0479 },
+    [stations]
+  );
+
   const [region, setRegion] = useState<Region>({
-    ...DEMO_CENTER,
+    latitude: 33.6844,
+    longitude: 73.0479,
     latitudeDelta: 0.06,
     longitudeDelta: 0.06,
   });
@@ -223,6 +155,7 @@ export default function ExploreScreen() {
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [locationFilter, setLocationFilter] = useState<string>("Near me");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -234,46 +167,107 @@ export default function ExploreScreen() {
   const [draftRating, setDraftRating] = useState(0);
   const [draftSort, setDraftSort] = useState<SortKey>("nearest");
 
-  const openFilters = () => {
-    setDraftLocation(locationFilter);
-    setDraftServices([...selectedServices]);
-    setDraftRating(minRating);
-    setDraftSort(sortBy);
-    setFiltersOpen(true);
-  };
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const [stRes, svcRes] = await Promise.all([
+          fetch(`${API_BASE}/stations/public`),
+          fetch(`${API_BASE}/services/public`),
+        ]);
+        if (!stRes.ok) throw new Error("Failed to load stations");
+        if (!svcRes.ok) throw new Error("Failed to load services");
+        const stData = await stRes.json();
+        const svcData = await svcRes.json();
+        if (cancelled) return;
+        setStations(stData.stations || []);
+        setServices(svcData.services || []);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message || "Failed to load data");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => { cancelled = true; };
+  }, []);
 
-  const applyFilters = () => {
-    setLocationFilter(draftLocation);
-    setSelectedServices([...draftServices]);
-    setMinRating(draftRating);
-    setSortBy(draftSort);
-    setFiltersOpen(false);
-  };
+  // Auto-request location on mount and watch for updates
+  useEffect(() => {
+    let watchId: Location.LocationSubscription;
+    let cancelled = false;
 
-  const clearDraftFilters = () => {
-    setDraftLocation("Near me");
-    setDraftServices([]);
-    setDraftRating(0);
-    setDraftSort("nearest");
-  };
+    const startWatching = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
 
-  const activeFilterCount =
-    (locationFilter !== "Near me" ? 1 : 0) +
-    (selectedServices.length > 0 ? 1 : 0) +
-    (minRating > 0 ? 1 : 0) +
-    (sortBy !== "nearest" ? 1 : 0);
+        watchId = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 5000,
+            distanceInterval: 10,
+          },
+          (loc) => {
+            if (cancelled) return;
+            const coords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            setUserCoords(coords);
+            // Update the blue dot on map via new imperative method
+            mapRef.current?.setUserLocation?.(coords.latitude, coords.longitude);
+          }
+        );
+      } catch (e) {
+        console.warn("Location watch failed:", e);
+      }
+    };
+
+    startWatching();
+    return () => {
+      cancelled = true;
+      if (watchId) {
+        watchId.remove();
+      }
+    };
+  }, []);
+
+  // Enable user location dot on map when we have coordinates
+  useEffect(() => {
+    if (userCoords) {
+      mapRef.current?.setUserLocationEnabled?.(true);
+    }
+  }, [userCoords]);
 
   const origin = userCoords ?? DEMO_CENTER;
 
+  const cityOptions = useMemo(() => {
+    const cities = new Set(stations.map((s) => s.city).filter(Boolean));
+    return ["Near me", ...Array.from(cities)];
+  }, [stations]);
+
+  const serviceOptions = useMemo(() => {
+    const names = new Set(services.map((s) => s.name));
+    const mapped = new Set<string>();
+    names.forEach((n) => mapped.add(mapServiceToCategory(n)));
+    return Array.from(mapped);
+  }, [services]);
+
   const filtered = useMemo(() => {
-    let list = MOCK_STATIONS.filter((s) => {
-      if (locationFilter !== "Near me" && s.area !== locationFilter) return false;
-      if (minRating > 0 && s.rating < minRating) return false;
-      if (
-        selectedServices.length > 0 &&
-        !selectedServices.every((svc) => s.services.includes(svc))
-      ) {
-        return false;
+    const q = searchQuery.trim().toLowerCase();
+    let list = stations.filter((s) => {
+      if (q && !s.name.toLowerCase().includes(q)) return false;
+      if (locationFilter !== "Near me" && s.city !== locationFilter) return false;
+      if (minRating > 0 && s.avg_rating < minRating) return false;
+      if (selectedServices.length > 0) {
+        const stationSvcNames = getStationServiceNames(s.id, services).map(
+          (n) => mapServiceToCategory(n)
+        );
+        if (
+          !selectedServices.every((svc) => stationSvcNames.includes(svc))
+        )
+          return false;
       }
       return true;
     });
@@ -281,13 +275,19 @@ export default function ExploreScreen() {
     list = [...list].sort((a, b) => {
       switch (sortBy) {
         case "rating":
-          return b.rating - a.rating;
+          return b.avg_rating - a.avg_rating;
         case "price_asc":
-          return a.minPrice - b.minPrice;
+          return (
+            (getMinPrice(a.id, services) ?? Infinity) -
+            (getMinPrice(b.id, services) ?? Infinity)
+          );
         case "price_desc":
-          return b.minPrice - a.minPrice;
+          return (
+            (getMinPrice(b.id, services) ?? 0) -
+            (getMinPrice(a.id, services) ?? 0)
+          );
         case "popular":
-          return Number(b.popular) - Number(a.popular) || b.reviewCount - a.reviewCount;
+          return b.booking_count - a.booking_count;
         case "nearest":
         default:
           return distanceKm(origin, a) - distanceKm(origin, b);
@@ -295,14 +295,19 @@ export default function ExploreScreen() {
     });
 
     return list;
-  }, [locationFilter, selectedServices, minRating, sortBy, origin]);
+  }, [stations, services, searchQuery, locationFilter, selectedServices, minRating, sortBy, origin]);
+
+  const activeFilterCount =
+    (locationFilter !== "Near me" ? 1 : 0) +
+    (selectedServices.length > 0 ? 1 : 0) +
+    (minRating > 0 ? 1 : 0) +
+    (sortBy !== "nearest" ? 1 : 0) +
+    (searchQuery.trim().length > 0 ? 1 : 0);
 
   const locateMe = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        return;
-      }
+      if (status !== "granted") return;
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
@@ -318,12 +323,10 @@ export default function ExploreScreen() {
       };
       setRegion(next);
       mapRef.current?.animateToRegion(next, 400);
-    } catch {
-      /* ignore */
-    }
+    } catch {}
   };
 
-  const focusStation = (station: MockStation) => {
+  const focusStation = (station: Station) => {
     setSelectedId(station.id);
     const next: Region = {
       latitude: station.latitude,
@@ -335,15 +338,41 @@ export default function ExploreScreen() {
     mapRef.current?.animateToRegion(next, 350);
   };
 
-  const toggleDraftService = (svc: string) => {
+  const openFilters = useCallback(() => {
+    setDraftLocation(locationFilter);
+    setDraftServices([...selectedServices]);
+    setDraftRating(minRating);
+    setDraftSort(sortBy);
+    setFiltersOpen(true);
+  }, [locationFilter, selectedServices, minRating, sortBy]);
+
+  const applyFilters = useCallback(() => {
+    setLocationFilter(draftLocation);
+    setSelectedServices([...draftServices]);
+    setMinRating(draftRating);
+    setSortBy(draftSort);
+    setFiltersOpen(false);
+  }, [draftLocation, draftServices, draftRating, draftSort]);
+
+  const clearDraftFilters = useCallback(() => {
+    setDraftLocation("Near me");
+    setDraftServices([]);
+    setDraftRating(0);
+    setDraftSort("nearest");
+  }, []);
+
+  const toggleDraftService = useCallback((svc: string) => {
     setDraftServices((prev) =>
       prev.includes(svc) ? prev.filter((s) => s !== svc) : [...prev, svc]
     );
-  };
+  }, []);
 
-  const renderStationCard = ({ item }: { item: MockStation }) => {
+  const renderStationCard = ({ item }: { item: Station }) => {
     const selected = item.id === selectedId;
     const km = distanceKm(origin, item);
+    const minPrice = getMinPrice(item.id, services);
+    const stationSvcNames = getStationServiceNames(item.id, services);
+    const isPopular = item.booking_count >= 5;
     return (
       <TouchableOpacity
         activeOpacity={0.85}
@@ -359,10 +388,10 @@ export default function ExploreScreen() {
               {item.name}
             </Text>
             <Text style={styles.cardMeta}>
-              {item.area} · {km.toFixed(1)} km
+              {item.city || "Unknown"} · {km.toFixed(1)} km
             </Text>
           </View>
-          {item.popular ? (
+          {isPopular ? (
             <View style={styles.popularBadge}>
               <Text style={styles.popularBadgeText}>Popular</Text>
             </View>
@@ -371,36 +400,45 @@ export default function ExploreScreen() {
         <View style={styles.cardRow}>
           <Ionicons name="star" size={14} color="#F5A623" />
           <Text style={styles.cardStat}>
-            {item.rating.toFixed(1)} ({item.reviewCount})
+            {(item.avg_rating ?? 0).toFixed(1)} ({item.rating_count ?? 0})
           </Text>
           <Text style={styles.dot}>·</Text>
-          <Text style={styles.cardPrice}>from Rs {item.minPrice}</Text>
+          <Text style={styles.cardPrice}>
+            {minPrice != null ? `from Rs ${minPrice}` : "No services"}
+          </Text>
         </View>
         <View style={styles.serviceRow}>
-          {item.services.slice(0, 3).map((svc) => (
+          {stationSvcNames.slice(0, 3).map((svc) => (
             <View key={svc} style={styles.serviceChip}>
               <Text style={styles.serviceChipText}>{svc}</Text>
             </View>
           ))}
-          {item.services.length > 3 ? (
-            <Text style={styles.moreServices}>+{item.services.length - 3}</Text>
+          {stationSvcNames.length > 3 ? (
+            <Text style={styles.moreServices}>
+              +{stationSvcNames.length - 3}
+            </Text>
           ) : null}
         </View>
-        <Text style={styles.prototypeHint}>Prototype — no booking link</Text>
       </TouchableOpacity>
     );
   };
 
   return (
     <SafeAreaView style={styles.root}>
-      {/* Top bar with back button */}
       <View style={styles.topBar}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.replace("/Home/home")}>
           <Ionicons name="arrow-back" size={22} color="#333" />
         </TouchableOpacity>
         <View style={styles.searchFake}>
           <Ionicons name="search" size={18} color="#888" />
-          <Text style={styles.searchPlaceholder}>Search stations (mock)</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search stations..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
         </View>
         <TouchableOpacity style={styles.filterBtn} onPress={openFilters}>
           <Ionicons name="options-outline" size={20} color="#111" />
@@ -412,7 +450,6 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* Map / List toggle */}
       <View style={styles.toggleRow}>
         <TouchableOpacity
           style={[styles.toggleBtn, viewMode === "map" && styles.toggleBtnOn]}
@@ -452,7 +489,7 @@ export default function ExploreScreen() {
             <View style={styles.webMapFallback}>
               <Ionicons name="map-outline" size={40} color="#999" />
               <Text style={styles.webMapText}>
-                Map prototype is for iOS / Android. Use List mode on web.
+                Map requires iOS / Android. Use List mode on web.
               </Text>
             </View>
           ) : (
@@ -463,40 +500,32 @@ export default function ExploreScreen() {
               onRegionChangeComplete={setRegion}
               showsUserLocation={!!userCoords}
               showsMyLocationButton={false}
-            >
-              {filtered.map((s) => (
-                <Marker
-                  key={s.id}
-                  coordinate={{
-                    latitude: s.latitude,
-                    longitude: s.longitude,
-                  }}
-                  onPress={() => focusStation(s)}
-                  tracksViewChanges={false}
-                >
-                  <StationPin
-                    selected={s.id === selectedId}
-                    popular={s.popular}
-                  />
-                </Marker>
-              ))}
-            </MapView>
+              markers={filtered.map((s) => ({
+                id: s.id,
+                latitude: s.latitude,
+                longitude: s.longitude,
+                onPress: () => focusStation(s),
+                selected: s.id === selectedId,
+                popular: s.booking_count >= 5,
+                title: s.name,
+              }))}
+            />
           )}
 
           <TouchableOpacity style={styles.locateBtn} onPress={locateMe}>
             <Ionicons name="locate" size={22} color="#111" />
           </TouchableOpacity>
 
-          {/* Bottom sheet list */}
           <View
             style={[
               styles.sheet,
-              { paddingBottom: Math.max(insets.bottom, 12) },
+              { paddingBottom: Math.max(insets.bottom, 12) + 80 },
             ]}
           >
             <View style={styles.sheetHandle} />
             <Text style={styles.sheetTitle}>
-              {filtered.length} station{filtered.length === 1 ? "" : "s"} nearby
+              {filtered.length} station
+              {filtered.length === 1 ? "" : "s"} nearby
             </Text>
             {filtered.length === 0 ? (
               <Text style={styles.emptyText}>
@@ -521,18 +550,33 @@ export default function ExploreScreen() {
           renderItem={renderStationCard}
           contentContainerStyle={{
             padding: 12,
-            paddingBottom: 120,
+            paddingBottom: Math.max(insets.bottom, 12) + 80,
             gap: 10,
           }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
-              No stations match. Open filters and clear some options.
+              {loading
+                ? "Loading stations..."
+                : error
+                  ? error
+                  : "No stations match. Open filters and clear some options."}
             </Text>
           }
         />
       )}
+      {loading ? (
+        <View style={styles.loadingBanner}>
+          <ActivityIndicator color="#FF7A00" size="small" />
+          <Text style={styles.loadingBannerText}>Loading stations...</Text>
+        </View>
+      ) : null}
+      {!loading && error ? (
+        <View style={styles.loadingBanner}>
+          <Ionicons name="cloud-offline-outline" size={16} color="#e74c3c" />
+          <Text style={[styles.loadingBannerText, { color: "#e74c3c" }]}>{error}</Text>
+        </View>
+      ) : null}
 
-      {/* Filters modal */}
       <Modal
         visible={filtersOpen}
         animationType="slide"
@@ -572,7 +616,7 @@ export default function ExploreScreen() {
 
             <Text style={styles.sectionLabel}>Location / area</Text>
             <View style={styles.wrapChips}>
-              {LOCATION_OPTIONS.map((loc) => (
+              {cityOptions.map((loc) => (
                 <Chip
                   key={loc}
                   label={loc}
@@ -596,9 +640,11 @@ export default function ExploreScreen() {
               ))}
             </View>
 
-            <Text style={styles.sectionLabel}>Services (all selected must match)</Text>
+            <Text style={styles.sectionLabel}>
+              Services (all selected must match)
+            </Text>
             <View style={styles.wrapChips}>
-              {SERVICE_OPTIONS.map((svc) => (
+              {serviceOptions.map((svc) => (
                 <Chip
                   key={svc}
                   label={svc}
@@ -652,7 +698,9 @@ function Chip({
           style={{ marginRight: 4 }}
         />
       ) : null}
-      <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+        {label}
+      </Text>
     </TouchableOpacity>
   );
 }
@@ -681,13 +729,15 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 12,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 4,
     borderWidth: 1,
     borderColor: "#E5E5E5",
   },
-  searchPlaceholder: {
-    color: "#999",
+  searchInput: {
+    flex: 1,
     fontSize: 14,
+    color: "#333",
+    paddingVertical: 8,
   },
   backBtn: {
     width: 40,
@@ -919,65 +969,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#888",
   },
-  prototypeHint: {
-    marginTop: 8,
-    fontSize: 10,
-    color: "#AAA",
-    fontStyle: "italic",
-  },
   emptyText: {
     textAlign: "center",
     color: "#888",
     padding: 24,
     fontSize: 14,
-  },
-  pinWrap: {
-    alignItems: "center",
-  },
-  pinBody: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: BRAND,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  pinBodySelected: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#0F766E",
-    borderWidth: 3,
-  },
-  pinBodyPopular: {
-    backgroundColor: POPULAR,
-  },
-  pinTip: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: BRAND,
-    marginTop: -1,
-  },
-  pinTipSelected: {
-    borderTopColor: "#0F766E",
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderTopWidth: 10,
-  },
-  pinTipPopular: {
-    borderTopColor: POPULAR,
   },
   modalBackdrop: {
     flex: 1,
@@ -1048,5 +1044,22 @@ const styles = StyleSheet.create({
   applyBtnText: {
     fontWeight: "800",
     color: "#fff",
+  },
+  loadingBanner: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.95)",
+    paddingVertical: 8,
+    zIndex: 100,
+  },
+  loadingBannerText: {
+    color: "#888",
+    fontSize: 13,
   },
 });

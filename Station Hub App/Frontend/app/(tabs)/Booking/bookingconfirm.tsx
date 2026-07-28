@@ -88,6 +88,15 @@ export default function BookingConfirmedScreen() {
     fetchDetails();
   }, [params.booking_id, latestEvent?.event_id]);
 
+  const statusLabels: Record<string, { title: string; subtitle: string }> = {
+    confirmed: { title: "Booking Confirmed!", subtitle: "Your service has been booked successfully" },
+    rejected:  { title: "Booking Rejected",   subtitle: "Your booking has been rejected" },
+    completed: { title: "Service Completed",  subtitle: "Your service has been completed" },
+    cancelled: { title: "Booking Cancelled",  subtitle: "Your booking has been cancelled" },
+    pending:   { title: "Booking Pending",    subtitle: "Your booking is pending confirmation" },
+  };
+  const statusInfo = statusLabels[booking?.status] || statusLabels.pending;
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: styles.container.backgroundColor }}>
       <ScrollView
@@ -100,15 +109,15 @@ export default function BookingConfirmedScreen() {
           <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
 
-        <Text style={styles.headerTitle}>Booking Confirmed</Text>
+        <Text style={styles.headerTitle}>{statusInfo.title}</Text>
 
         <View style={{ width: 24 }} />
       </View>
 
       {/* TITLE */}
-      <Text style={styles.title}>Booking Confirmed!</Text>
+      <Text style={styles.title}>{statusInfo.title}</Text>
       <Text style={styles.subtitle}>
-        Your service has been booked successfully
+        {statusInfo.subtitle}
       </Text>
 
       {/* IMAGE */}

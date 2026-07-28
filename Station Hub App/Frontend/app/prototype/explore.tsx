@@ -8,7 +8,7 @@
  *
  * Safe to delete this entire file (and app/prototype/) later.
  */
-import React, { useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -23,7 +23,8 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import MapView, { Marker, Region } from "react-native-maps";
+import MapView from "@/components/Map";
+import type { Region } from "@/components/Map";
 import * as Location from "expo-location";
 
 // ─── Mock data (prototype only — not wired to API) ───────────────────────────
@@ -193,38 +194,9 @@ function distanceKm(
 
 // ─── Custom pin (view-based, no shared assets) ───────────────────────────────
 
-function StationPin({ selected, popular }: { selected: boolean; popular?: boolean }) {
-  return (
-    <View style={styles.pinWrap}>
-      <View
-        style={[
-          styles.pinBody,
-          selected && styles.pinBodySelected,
-          popular && !selected && styles.pinBodyPopular,
-        ]}
-      >
-        <Ionicons
-          name="water"
-          size={selected ? 16 : 14}
-          color="#fff"
-        />
-      </View>
-      <View
-        style={[
-          styles.pinTip,
-          selected && styles.pinTipSelected,
-          popular && !selected && styles.pinTipPopular,
-        ]}
-      />
-    </View>
-  );
-}
-
-// ─── Screen ──────────────────────────────────────────────────────────────────
-
 export default function PrototypeExploreScreen() {
   const insets = useSafeAreaInsets();
-  const mapRef = useRef<MapView | null>(null);
+  const mapRef = useRef<React.ElementRef<typeof MapView>>(null);
 
   const [userCoords, setUserCoords] = useState<{
     latitude: number;
@@ -251,6 +223,53 @@ export default function PrototypeExploreScreen() {
   const [draftServices, setDraftServices] = useState<string[]>([]);
   const [draftRating, setDraftRating] = useState(0);
   const [draftSort, setDraftSort] = useState<SortKey>("nearest");
+
+  // Auto-request location on mount and watch for updates
+  useEffect(() => {
+    let watchId: Location.LocationSubscription;
+    let cancelled = false;
+
+    const startWatching = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+
+        watchId = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.Balanced,
+            timeInterval: 5000,
+            distanceInterval: 10,
+          },
+          (loc) => {
+            if (cancelled) return;
+            const coords = {
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+            };
+            setUserCoords(coords);
+            mapRef.current?.setUserLocation?.(coords.latitude, coords.longitude);
+          }
+        );
+      } catch (e) {
+        console.warn("Location watch failed:", e);
+      }
+    };
+
+    startWatching();
+    return () => {
+      cancelled = true;
+      if (watchId) {
+        watchId.remove();
+      }
+    };
+  }, []);
+
+  // Enable user location dot on map when we have coordinates
+  useEffect(() => {
+    if (userCoords) {
+      mapRef.current?.setUserLocationEnabled?.(true);
+    }
+  }, [userCoords]);
 
   const openFilters = () => {
     setDraftLocation(locationFilter);
@@ -487,24 +506,16 @@ export default function PrototypeExploreScreen() {
               onRegionChangeComplete={setRegion}
               showsUserLocation={!!userCoords}
               showsMyLocationButton={false}
-            >
-              {filtered.map((s) => (
-                <Marker
-                  key={s.id}
-                  coordinate={{
-                    latitude: s.latitude,
-                    longitude: s.longitude,
-                  }}
-                  onPress={() => focusStation(s)}
-                  tracksViewChanges={false}
-                >
-                  <StationPin
-                    selected={s.id === selectedId}
-                    popular={s.popular}
-                  />
-                </Marker>
-              ))}
-            </MapView>
+              markers={filtered.map((s) => ({
+                id: s.id,
+                latitude: s.latitude,
+                longitude: s.longitude,
+                onPress: () => focusStation(s),
+                selected: s.id === selectedId,
+                popular: s.popular,
+                title: s.name,
+              }))}
+            />
           )}
 
           <TouchableOpacity style={styles.locateBtn} onPress={locateMe}>
@@ -971,54 +982,7 @@ const styles = StyleSheet.create({
     padding: 24,
     fontSize: 14,
   },
-  pinWrap: {
-    alignItems: "center",
-  },
-  pinBody: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: BRAND,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: "#fff",
-    elevation: 3,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    shadowOffset: { width: 0, height: 1 },
-  },
-  pinBodySelected: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "#0F766E",
-    borderWidth: 3,
-  },
-  pinBodyPopular: {
-    backgroundColor: POPULAR,
-  },
-  pinTip: {
-    width: 0,
-    height: 0,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 8,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: BRAND,
-    marginTop: -1,
-  },
-  pinTipSelected: {
-    borderTopColor: "#0F766E",
-    borderLeftWidth: 7,
-    borderRightWidth: 7,
-    borderTopWidth: 10,
-  },
-  pinTipPopular: {
-    borderTopColor: POPULAR,
-  },
+
   modalBackdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",

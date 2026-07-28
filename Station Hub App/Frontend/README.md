@@ -11,7 +11,7 @@ Customer-facing **React Native (Expo)** app for discovering vehicle service stat
 | Runtime | Expo SDK ~51, React Native 0.74 |
 | Routing | Expo Router (file-based) |
 | Storage | AsyncStorage (tokens, cache) |
-| Maps / location | `react-native-maps`, `expo-location` |
+| Maps / location | WebView + Leaflet (OpenStreetMap), `expo-location` |
 | API | Shared FastAPI backend via `src/api.ts` |
 
 ---

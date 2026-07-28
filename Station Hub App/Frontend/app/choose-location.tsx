@@ -16,10 +16,10 @@ export default function ChooseLocationScreen() {
   } | null>(null);
 
   const [region, setRegion] = useState({
-    latitude: 37.78825,
-    longitude: -122.4324,
-    latitudeDelta: 0.01,
-    longitudeDelta: 0.01,
+    latitude: 33.6844,
+    longitude: 73.0479,
+    latitudeDelta: 0.06,
+    longitudeDelta: 0.06,
   });
 
   const [cityName, setCityName] = useState<string>("");

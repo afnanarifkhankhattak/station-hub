@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTheme } from "../../context/theme.Context";
 import {
   collection,
@@ -9,9 +9,11 @@ import {
   onSnapshot,
   query,
   where,
-  getDocs, // ← add
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../firebase";
+import "leaflet/dist/leaflet.css";
+import L from "leaflet";
 
 const CLOUDINARY_CLOUD_NAME = "dqlmva24c";
 const CLOUDINARY_UPLOAD_PRESET = "StationHub";
@@ -172,36 +174,6 @@ const IconClock = () => (
     />
   </svg>
 );
-const IconStation = () => (
-  <svg
-    className="w-8 h-8 text-orange-300 opacity-40"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={1.5}
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8 7h8M8 12h8M8 17h4M5 3h14a2 2 0 012 2v16l-3-2-3 2-3-2-3 2-3-2V5a2 2 0 012-2z"
-    />
-  </svg>
-);
-const IconBus = () => (
-  <svg
-    className="w-3.5 h-3.5"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth={2}
-    viewBox="0 0 24 24"
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8 6v12M16 6v12M3 10h18M3 14h18M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-    />
-  </svg>
-);
 
 // ── Empty State ────────────────────────────────────────────
 const EmptyState = ({ onAdd, D }) => (
@@ -254,8 +226,8 @@ const EMPTY_FORM = {
   break_start: "13:00",
   break_end: "14:00",
   description: "",
-  latitude: "",
-  longitude: "",
+  latitude: null,
+  longitude: null,
   image_url: "",
 };
 
@@ -308,6 +280,8 @@ const StationForm = ({
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [newCategory, setNewCategory] = useState("");
   const [catMsg, setCatMsg] = useState("");
+  const [showMapPicker, setShowMapPicker] = useState(false);
+  const [mapPickerCoords, setMapPickerCoords] = useState({ lat: null, lng: null });
   const set = (k, v) => setForm((prev) => ({ ...prev, [k]: v }));
 
   const lbl = D ? "text-gray-400" : "text-gray-600";
@@ -328,12 +302,61 @@ const StationForm = ({
     setLocMsg("Detecting location...");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        set("latitude", pos.coords.latitude.toFixed(6));
-        set("longitude", pos.coords.longitude.toFixed(6));
+        set("latitude", pos.coords.latitude);
+        set("longitude", pos.coords.longitude);
         setLocMsg("ok:Location detected");
       },
       () => setLocMsg("Failed to detect location"),
     );
+  };
+
+  const handleMapPick = (lat, lng) => {
+    set("latitude", lat);
+    set("longitude", lng);
+    setMapPickerCoords({ lat: null, lng: null });
+    setShowMapPicker(false);
+    setLocMsg("ok:Location picked from map");
+  };
+
+  const mapRef = useRef(null);
+  const leafletMapRef = useRef(null);
+
+  useEffect(() => {
+    if (!showMapPicker || leafletMapRef.current) return;
+    const container = mapRef.current;
+    if (!container) return;
+
+    const map = L.map(container).setView(
+      form.latitude && form.longitude
+        ? [form.latitude, form.longitude]
+        : [33.6844, 73.0479],
+      13
+    );
+    leafletMapRef.current = map;
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    let marker = null;
+    map.on("click", (e) => {
+      const { lat, lng } = e.latlng;
+      setMapPickerCoords({ lat, lng });
+      if (marker) map.removeLayer(marker);
+      marker = L.marker([lat, lng]).addTo(map).bindPopup("Click Confirm to select").openPopup();
+    });
+
+    return () => {
+      map.remove();
+      leafletMapRef.current = null;
+    };
+  }, [showMapPicker, form.latitude, form.longitude]);
+
+  const confirmMapPick = () => {
+    if (mapPickerCoords.lat != null && mapPickerCoords.lng != null) {
+      handleMapPick(mapPickerCoords.lat, mapPickerCoords.lng);
+    }
   };
 
   const addCategory = () => {
@@ -489,13 +512,30 @@ const StationForm = ({
                 {locMsg.replace("ok:", "")}
               </p>
             )}
-            {form.latitude && form.longitude && (
-              <p
-                className={`text-xs mt-0.5 ${D ? "text-gray-500" : "text-gray-400"}`}
+            <div className="flex items-center gap-2 flex-wrap mt-2">
+              {form.latitude != null && form.longitude != null && (
+                <>
+                  <span className={`text-xs font-mono ${D ? "text-gray-400" : "text-gray-500"}`}>
+                    📍 {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+                  </span>
+                  <a
+                    href={`https://www.openstreetmap.org/?mlat=${form.latitude}&mlon=${form.longitude}#map=18/${form.latitude}/${form.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-orange-500 hover:underline"
+                  >
+                    Verify on OSM
+                  </a>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setShowMapPicker(true)}
+                className="text-xs text-orange-500 hover:text-orange-600 font-semibold cursor-pointer"
               >
-                📍 {form.latitude}, {form.longitude}
-              </p>
-            )}
+                Pick on Map
+              </button>
+            </div>
           </div>
 
           {/* Category */}
@@ -755,6 +795,39 @@ const StationForm = ({
           </button>
         </div>
       </div>
+
+      {/* Map Picker Modal */}
+      {showMapPicker && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-2xl h-[60vh] bg-white rounded-2xl shadow-xl flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+              <h3 className="text-lg font-semibold">Pick Location on Map</h3>
+              <button
+                onClick={() => setShowMapPicker(false)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100"
+              >
+                ✕
+              </button>
+            </div>
+            <div ref={mapRef} id="map-picker" className="flex-1 min-h-0 w-full" />
+            <div className="px-4 py-3 border-t flex justify-end gap-2 shrink-0">
+              <button
+                onClick={() => setShowMapPicker(false)}
+                className="px-4 py-2 text-sm font-medium border rounded-xl hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmMapPick}
+                disabled={!mapPickerCoords.lat || !mapPickerCoords.lng}
+                className="px-4 py-2 text-sm font-medium bg-orange-500 text-white rounded-xl hover:bg-orange-600 disabled:opacity-50"
+              >
+                Confirm Location
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -954,6 +1027,7 @@ const Stations = () => {
     if (!form.name.trim()) return "Station name is required";
     if (!form.city.trim()) return "City is required";
     if (!form.address.trim()) return "Address is required";
+    if (form.latitude == null || form.longitude == null) return "Location coordinates are required";
     return null;
   };
 
@@ -977,7 +1051,7 @@ const Stations = () => {
       let image_url = form.image_url || "";
       if (imageFile) image_url = await uploadToCloudinary(imageFile); // ← add
 
-      const docRef = await addDoc(collection(db, "stations"), {
+      await addDoc(collection(db, "stations"), {
         ...form,
         image_url, // ← add
         owner_id: payload.sub,
@@ -1093,35 +1167,44 @@ const Stations = () => {
         (() => {
           const stn = stations.find((s) => s.id === editingId);
           if (!stn) return null;
+          const hasCoords = stn.latitude != null && stn.longitude != null;
           return (
-            <StationForm
-              title={`Edit — ${stn.name}`}
-              initial={{
-                name: stn.name || "",
-                address: stn.address || "",
-                phone: stn.phone || "",
-                city: stn.city || "",
-                category: stn.category || "",
-                status: stn.status || "Active",
-                opening: stn.opening || "08:00",
-                closing: stn.closing || "18:00",
-                sun_off: stn.sun_off ?? true,
-                break_start: stn.break_start || "13:00",
-                break_end: stn.break_end || "14:00",
-                description: stn.description || "",
-                latitude: stn.latitude || "",
-                longitude: stn.longitude || "",
-                image_url: stn.image_url || "", // ← add
-              }}
-              onSave={handleEdit}
-              onCancel={() => {
-                setEditingId(null);
-                setFormError("");
-              }}
-              saving={saving}
-              error={formError}
-              D={D}
-            />
+            <>
+              {!hasCoords && (
+                <div className={`mb-4 p-3 rounded-xl border ${D ? "bg-yellow-500/10 border-yellow-500/30 text-yellow-400" : "bg-yellow-50 border-yellow-200 text-yellow-700"}`}>
+                  <p className="text-sm font-medium">⚠ This station has no coordinates.</p>
+                  <p className="text-xs mt-1">It won't appear on the mobile app map until location is set.</p>
+                </div>
+              )}
+              <StationForm
+                title={`Edit — ${stn.name}`}
+                initial={{
+                  name: stn.name || "",
+                  address: stn.address || "",
+                  phone: stn.phone || "",
+                  city: stn.city || "",
+                  category: stn.category || "",
+                  status: stn.status || "Active",
+                  opening: stn.opening || "08:00",
+                  closing: stn.closing || "18:00",
+                  sun_off: stn.sun_off ?? true,
+                  break_start: stn.break_start || "13:00",
+                  break_end: stn.break_end || "14:00",
+                  description: stn.description || "",
+                  latitude: stn.latitude ?? null,
+                  longitude: stn.longitude ?? null,
+                  image_url: stn.image_url || "",
+                }}
+                onSave={handleEdit}
+                onCancel={() => {
+                  setEditingId(null);
+                  setFormError("");
+                }}
+                saving={saving}
+                error={formError}
+                D={D}
+              />
+            </>
           );
         })()}
 

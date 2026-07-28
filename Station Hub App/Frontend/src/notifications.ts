@@ -4,19 +4,26 @@ import { Platform } from "react-native";
 import { API_BASE } from "./config";
 import { apiFetch } from "./api";
 
-
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    // Foreground updates are rendered by BookingEventsProvider so users get
-    // one accessible, actionable notification instead of duplicate alerts.
-    shouldShowAlert: false,
+    shouldShowAlert: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
 });
 
-export async function registerPushToken() {
-  if (!Device.isDevice) return;
+async function setupAndroidChannel() {
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.HIGH,
+      vibrationPattern: [0, 250, 250, 250],
+    });
+  }
+}
+
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!Device.isDevice) return false;
 
   const { status: existing } = await Notifications.getPermissionsAsync();
   let finalStatus = existing;
@@ -26,25 +33,51 @@ export async function registerPushToken() {
     finalStatus = status;
   }
 
-  if (finalStatus !== "granted") return;
+  return finalStatus === "granted";
+}
 
-  let token: string;
+export async function registerPushToken(): Promise<string | null> {
+  if (!Device.isDevice) return null;
+
+  const granted = await requestNotificationPermission();
+  if (!granted) return null;
+
+  await setupAndroidChannel();
+
   try {
-    token = (await Notifications.getExpoPushTokenAsync()).data;
-  } catch {
-    return;
-  }
+    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const token = tokenData.data;
 
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.MAX,
-      vibrationPattern: [0, 250, 250, 250],
+    await apiFetch(`${API_BASE}/profile/push-token`, {
+      method: "PUT",
+      body: JSON.stringify({ push_token: token }),
     });
-  }
 
-  await apiFetch(`${API_BASE}/profile/push-token`, {
-    method: "PUT",
-    body: JSON.stringify({ push_token: token }),
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+export function setupNotificationResponseListener() {
+  return Notifications.addNotificationResponseReceivedListener((response) => {
+    const bookingId = response.notification.request.content.data.booking_id;
+    if (typeof bookingId === "string") {
+      // Navigation is handled by BookingEventsProvider
+    }
   });
+}
+
+export function setupForegroundNotificationListener() {
+  return Notifications.addNotificationReceivedListener((_notification) => {
+    // Handled by BookingEventsProvider
+  });
+}
+
+export async function initializeNotifications() {
+  const granted = await requestNotificationPermission();
+  if (!granted) return;
+
+  await setupAndroidChannel();
+  await registerPushToken();
 }

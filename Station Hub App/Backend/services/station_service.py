@@ -143,8 +143,27 @@ def get_station_by_id(station_id: str) -> dict:
     return {"station": data}
 
 
+def _coerce_lat_lon(data: dict) -> dict:
+    """Ensure latitude/longitude are valid floats within bounds."""
+    try:
+        lat = float(data["latitude"])
+        lon = float(data["longitude"])
+    except (TypeError, ValueError, KeyError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid coordinates: {e}")
+
+    if not (-90 <= lat <= 90):
+        raise HTTPException(status_code=400, detail=f"Latitude out of range: {lat}")
+    if not (-180 <= lon <= 180):
+        raise HTTPException(status_code=400, detail=f"Longitude out of range: {lon}")
+
+    data["latitude"] = lat
+    data["longitude"] = lon
+    return data
+
+
 def add_station(body, user_id: str) -> dict:
     data = body.model_dump()
+    data = _coerce_lat_lon(data)
     data["owner_id"] = user_id
     data["created_at"] = datetime.utcnow().isoformat()
     doc_ref = db.collection("stations").add(data)

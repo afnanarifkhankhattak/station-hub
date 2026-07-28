@@ -21,7 +21,6 @@ export default {
       package: "com.stationhub1.app",
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON || "./google-services.json",
       useNextNotificationsApi: true,
-      googleMapsApiKey: "",
     },
     web: {
       bundler: "metro",
