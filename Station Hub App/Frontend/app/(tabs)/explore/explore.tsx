@@ -508,6 +508,7 @@ export default function ExploreScreen() {
                 selected: s.id === selectedId,
                 popular: s.booking_count >= 5,
                 title: s.name,
+                image_url: s.image_url,
               }))}
             />
           )}

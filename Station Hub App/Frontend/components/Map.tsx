@@ -16,6 +16,7 @@ type MarkerData = {
   title?: string;
   selected?: boolean;
   popular?: boolean;
+  image_url?: string;
   onPress?: () => void;
 };
 
@@ -36,7 +37,7 @@ const DEF_REGION = { latitude: 33.6844, longitude: 73.0479, latitudeDelta: 0.06,
 
 function buildMapHtml(
   region: Region,
-  markers: { id: string; latitude: number; longitude: number; title?: string; selected?: boolean; popular?: boolean }[]
+  markers: { id: string; latitude: number; longitude: number; title?: string; selected?: boolean; popular?: boolean; image_url?: string }[]
 ): string {
   const markersJson = JSON.stringify(markers);
   const initialZoom = deltaToZoom(region.latitudeDelta);
@@ -112,9 +113,12 @@ html,body,#map{width:100%;height:100%;overflow:hidden}
     var bg = m.popular ? "#D97706" : "#FF7A00";
     var cls = "marker-pin";
     if(m.selected) cls += " marker-selected";
+    var innerHtml = m.image_url
+      ? '<span class="marker-pin-inner"><img src="'+m.image_url+'" style="width:'+(size-8)+'px;height:'+(size-8)+'px;border-radius:50%;object-fit:cover;display:block" /></span>'
+      : '<span class="marker-pin-inner">⛽</span>';
     return L.divIcon({
       className:"",
-      html:'<div class="'+cls+'" style="width:'+size+'px;height:'+size+'px;background:'+bg+'"><span class="marker-pin-inner">⛽</span></div>',
+      html:'<div class="'+cls+'" style="width:'+size+'px;height:'+size+'px;background:'+bg+'">'+innerHtml+'</div>',
       iconSize:[size,size],
       iconAnchor:[size/2,size],
       popupAnchor:[0,-size]
@@ -206,6 +210,7 @@ const MapView = React.forwardRef<any, MapViewProps>((props, ref) => {
       title: m.title,
       selected: m.selected,
       popular: m.popular,
+      image_url: m.image_url,
     }))
   );
 
@@ -264,6 +269,7 @@ const MapView = React.forwardRef<any, MapViewProps>((props, ref) => {
       title: m.title,
       selected: m.selected,
       popular: m.popular,
+      image_url: m.image_url,
     }));
     webViewRef.current?.injectJavaScript(`
       if(window.updateMarkers) window.updateMarkers(${JSON.stringify(safe)});
