@@ -12,6 +12,7 @@ import {
   Dimensions,
   TextInput,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -423,6 +424,75 @@ export default function ExploreScreen() {
     );
   };
 
+  const renderListRow = ({ item }: { item: Station }) => {
+    const km = distanceKm(origin, item);
+    const minPrice = getMinPrice(item.id, services);
+    const stationSvcNames = getStationServiceNames(item.id, services);
+    const isPopular = item.booking_count >= 5;
+    return (
+      <Pressable
+        style={styles.row}
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/Home/stationdetail",
+            params: {
+              station_id: item.id,
+              station_data: JSON.stringify(item),
+            },
+          })
+        }
+      >
+        <View style={styles.rowAvatarWrap}>
+          {item.image_url ? (
+            <Image source={{ uri: item.image_url }} style={styles.rowAvatar} />
+          ) : (
+            <View style={styles.rowAvatarFallback}>
+              <Ionicons name="car-sport-outline" size={24} color="#fff" />
+            </View>
+          )}
+        </View>
+        <View style={styles.rowBody}>
+          <View style={styles.rowTitleLine}>
+            <Text style={styles.rowName} numberOfLines={1}>
+              {item.name}
+            </Text>
+            {isPopular ? (
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularBadgeText}>Popular</Text>
+              </View>
+            ) : null}
+          </View>
+          <Text style={styles.rowAddress} numberOfLines={1}>
+            {[item.address, item.city].filter(Boolean).join(", ") || "Unknown"}{" "}
+            · {km.toFixed(1)} km
+          </Text>
+          <View style={styles.rowBottom}>
+            <View style={styles.rowChips}>
+              {stationSvcNames.slice(0, 2).map((svc) => (
+                <View key={svc} style={styles.rowChip}>
+                  <Text style={styles.rowChipText}>{svc}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={styles.rowPrice}>
+              {minPrice != null ? `from Rs ${minPrice}` : "No services"}
+            </Text>
+          </View>
+        </View>
+        <View style={styles.rowRight}>
+          <View style={styles.ratingRow}>
+            <Ionicons name="star" size={13} color="#F5A623" />
+            <Text style={styles.ratingText}>
+              {(item.avg_rating ?? 0).toFixed(1)}
+            </Text>
+          </View>
+          <Text style={styles.ratingCount}>({item.rating_count ?? 0})</Text>
+          <Ionicons name="chevron-forward" size={16} color="#CCC" />
+        </View>
+      </Pressable>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.topBar}>
@@ -548,11 +618,10 @@ export default function ExploreScreen() {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
-          renderItem={renderStationCard}
+          renderItem={renderListRow}
           contentContainerStyle={{
-            padding: 12,
+            paddingHorizontal: 16,
             paddingBottom: Math.max(insets.bottom, 12) + 80,
-            gap: 10,
           }}
           ListEmptyComponent={
             <Text style={styles.emptyText}>
@@ -901,6 +970,99 @@ const styles = StyleSheet.create({
   cardSelected: {
     borderColor: BRAND,
     backgroundColor: "#F0FDFA",
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: "#E5E5E5",
+  },
+  rowAvatarWrap: {
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    overflow: "hidden",
+    backgroundColor: "#F0F0F0",
+  },
+  rowAvatar: {
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+  },
+  rowAvatarFallback: {
+    width: 55,
+    height: 55,
+    borderRadius: 28,
+    backgroundColor: BRAND,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  rowBody: {
+    flex: 1,
+  },
+  rowTitleLine: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  rowName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#111",
+    flexShrink: 1,
+  },
+  rowAddress: {
+    fontSize: 12,
+    color: "#777",
+    marginTop: 2,
+  },
+  rowBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    marginTop: 6,
+  },
+  rowChips: {
+    flexDirection: "row",
+    gap: 4,
+    flexShrink: 1,
+  },
+  rowChip: {
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  rowChipText: {
+    fontSize: 10,
+    color: "#666",
+    fontWeight: "600",
+  },
+  rowPrice: {
+    fontSize: 12,
+    color: BRAND_DARK,
+    fontWeight: "700",
+  },
+  rowRight: {
+    alignItems: "flex-end",
+    gap: 2,
+  },
+  ratingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  ratingText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111",
+  },
+  ratingCount: {
+    fontSize: 10,
+    color: "#999",
   },
   cardTop: {
     flexDirection: "row",
