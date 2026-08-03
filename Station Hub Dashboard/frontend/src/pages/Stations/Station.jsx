@@ -516,7 +516,7 @@ const StationForm = ({
               {form.latitude != null && form.longitude != null && (
                 <>
                   <span className={`text-xs font-mono ${D ? "text-gray-400" : "text-gray-500"}`}>
-                    📍 {form.latitude.toFixed(6)}, {form.longitude.toFixed(6)}
+                    📍 {Number(form.latitude).toFixed(6)}, {Number(form.longitude).toFixed(6)}
                   </span>
                   <a
                     href={`https://www.openstreetmap.org/?mlat=${form.latitude}&mlon=${form.longitude}#map=18/${form.latitude}/${form.longitude}`}

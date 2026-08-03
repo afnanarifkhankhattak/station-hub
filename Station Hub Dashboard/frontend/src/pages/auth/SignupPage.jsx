@@ -3,6 +3,8 @@ import Logo from "../../assets/lightMainLogo.png";
 import BGImage from "../../assets/WebLandingPage2.png";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../api/api";
+import { auth, googleProvider } from "../../firebase";
+import { signInWithPopup } from "firebase/auth";
 
 const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -19,6 +21,32 @@ const SignupPage = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const navigate = useNavigate();
+
+  const handleGoogleSignup = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      const id_token = await result.user.getIdToken();
+      const data = await api.auth.googleLogin(id_token);
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            ...data.user,
+            avatar_url: result.user.photoURL || data.user?.avatar_url || null,
+          }),
+        );
+        setSuccess("Account created successfully!");
+        setTimeout(() => navigate("/dashboard"), 1500);
+      }
+    } catch (err) {
+      setError(err.message || "Google signup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSignup = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
@@ -225,7 +253,10 @@ const SignupPage = () => {
 
         {/* Google only */}
         <div className="w-full mb-6">
-          <button className="w-full h-9 border border-gray-300 rounded-xl bg-white flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+          <button
+            onClick={handleGoogleSignup}
+            disabled={loading}
+            className="w-full h-9 border border-gray-300 rounded-xl bg-white flex items-center justify-center gap-1.5 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-70">
             <svg width="16" height="16" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>

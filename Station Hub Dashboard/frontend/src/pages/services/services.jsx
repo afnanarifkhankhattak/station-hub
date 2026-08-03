@@ -365,7 +365,7 @@ const ServiceForm = ({
                       className="accent-orange-500"
                       id={`cat-${cat.id}`}
                     />
-                    <label htmlFor={`cat-${cat.id}`} className="text-sm font-medium cursor-pointer">{cat.label}</label>
+                    <label htmlFor={`cat-${cat.id}`} className={`text-sm font-medium cursor-pointer ${D ? "text-gray-300" : "text-gray-700"}`}>{cat.label}</label>
                   </div>
 
                   {form.categories?.[cat.id] && <div className="ml-6 mt-2 max-w-xs">
@@ -406,7 +406,7 @@ const ServiceForm = ({
                       id={`cat-${cat.id}`}
                     />
                     <label htmlFor={`cat-${cat.id}`} className="cursor-pointer">
-                      <span className="block text-sm font-medium">{cat.label}</span>
+                      <span className={`block text-sm font-medium ${D ? "text-gray-300" : "text-gray-700"}`}>{cat.label}</span>
                       <span className={`block text-[11px] mt-0.5 ${D ? "text-gray-500" : "text-gray-400"}`}>
                         {cat.example}
                       </span>
