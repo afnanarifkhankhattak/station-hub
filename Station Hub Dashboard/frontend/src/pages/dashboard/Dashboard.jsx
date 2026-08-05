@@ -73,7 +73,7 @@ const Dashboard = () => {
   const [confirmed, setConfirmed] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [actioning, setActioning] = useState({})
+  const [actionsInProgress, setActionsInProgress] = useState({})
   // const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
 
   const user = JSON.parse(localStorage.getItem('user') || '{}')
@@ -114,7 +114,7 @@ const Dashboard = () => {
   const { dark } = useTheme()
 
   const updateStatus = async (id, status) => {
-    setActioning(prev => ({ ...prev, [id]: true }))
+    setActionsInProgress(prev => ({ ...prev, [id]: true }))
     try {
       await api.patch(`/dashboard/bookings/${id}/status`, { status })
       if (status === 'confirmed') {
@@ -131,7 +131,7 @@ const Dashboard = () => {
     } catch (e) {
       alert(e.message || 'Action failed')
     } finally {
-      setActioning(prev => ({ ...prev, [id]: false }))
+      setActionsInProgress(prev => ({ ...prev, [id]: false }))
     }
   }
 
@@ -158,7 +158,7 @@ const Dashboard = () => {
   }
 
   if (loading) return (
-    <div className={`flex items-center justify-center h-full min-h-[300px] transition-colors duration-300 ${bg}`}>
+    <div className={`flex items-center justify-center h-full min-h-75 transition-colors duration-300 ${bg}`}>
       <div className="w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
@@ -203,7 +203,7 @@ const Dashboard = () => {
         ))}
       </div>
 
-      <div className={`rounded-2xl p-5 mb-6 bg-gradient-to-r from-orange-500 to-orange-400 flex items-center justify-between shadow-sm`}>
+      <div className={`rounded-2xl p-5 mb-6 bg-linear-to-r from-orange-500 to-orange-400 flex items-center justify-between shadow-sm`}>
         <div>
           <p className="text-sm text-orange-100 mb-1">Today's Earnings</p>
           <p className="text-3xl font-bold text-white">
@@ -248,7 +248,7 @@ const Dashboard = () => {
                         className="w-9 h-9 rounded-full object-cover shrink-0"
                       />
                     ) : (
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
                         {avatar(b.user_name)}
                       </div>
                     )}
@@ -278,14 +278,14 @@ const Dashboard = () => {
                       )}
                       <div className="flex items-center gap-2 mt-3">
                         <button
-                          disabled={actioning[b.id]}
+                          disabled={actionsInProgress[b.id]}
                           onClick={() => updateStatus(b.id, 'confirmed')}
                           className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${D ? 'bg-green-500/20 hover:bg-green-500/30 text-green-400' : 'bg-green-50 hover:bg-green-100 text-green-600'}`}
                         >
                           <IconCheck /> Confirm
                         </button>
                         <button
-                          disabled={actioning[b.id]}
+                          disabled={actionsInProgress[b.id]}
                           onClick={() => updateStatus(b.id, 'rejected')}
                           className={`flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors disabled:opacity-50 ${D ? 'bg-red-500/20 hover:bg-red-500/30 text-red-400' : 'bg-red-50 hover:bg-red-100 text-red-500'}`}
                         >
@@ -325,10 +325,10 @@ const Dashboard = () => {
                       <img
                         src={b.user_profile_image}
                         alt={b.user_name}
-                        className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                        className="w-7 h-7 rounded-full object-cover shrink-0"
                       />
                     ) : (
-                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold flex-shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
+                      <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${D ? 'bg-orange-500/20 text-orange-400' : 'bg-orange-100 text-orange-600'}`}>
                         {avatar(b.user_name)}
                       </div>
                     )}
@@ -352,7 +352,7 @@ const Dashboard = () => {
                   )}
                   <div className="flex gap-2 mt-2.5">
                     <button
-                      disabled={actioning[b.id]}
+                      disabled={actionsInProgress[b.id]}
                       onClick={() => updateStatus(b.id, 'completed')}
                       className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-xs rounded-lg transition-colors disabled:opacity-50"
                     >
