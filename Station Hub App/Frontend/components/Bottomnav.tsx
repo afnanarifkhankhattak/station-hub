@@ -16,12 +16,12 @@ const tabs: TabDef[] = [
   { label: "Home", icon: "home", key: "Home", route: "/Home/home" },
   { label: "Explore", icon: "compass", key: "explore", route: "/explore/explore" },
   { label: "Booking", icon: "calendar", key: "Booking", route: "/Booking/booking" },
-  {
-    label: "MY Booking",
-    icon: "clipboard",
-    key: "bookingHistory",
-    route: "/profile/bookingHistory/bookinghistory",
-  },
+  // {
+  //   label: "MY Booking",
+  //   icon: "clipboard",
+  //   key: "bookingHistory",
+  //   route: "/profile/bookingHistory/bookinghistory",
+  // },
   { label: "Services", icon: "construct", key: "service", route: "/service/index" },
   { label: "Profile", icon: "person", key: "profile", route: "/profile" },
 ];
@@ -30,15 +30,15 @@ function isTabActive(key: string, pathname: string): boolean {
   const path = pathname || "";
 
   switch (key) {
-    case "Home":
-      return path.includes("/Home");
+    
     case "explore":
       return path.includes("/explore");
     case "Booking":
       // Avoid matching "bookingHistory" under profile
       return path.includes("/Booking");
-    case "bookingHistory":
-      return path.includes("bookingHistory");
+      case "Home":
+      return path.includes("/Home");
+    
     case "service":
       return path.includes("/service");
     case "profile":
