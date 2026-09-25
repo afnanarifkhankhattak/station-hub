@@ -1,26 +1,27 @@
-import React, { useMemo, useRef, useState, useEffect, useCallback } from "react";
+import Bottomnav from "@/components/Bottomnav";
+import type { Region } from "@/components/Map";
+import MapView from "@/components/Map";
+import { Ionicons } from "@expo/vector-icons";
+import * as Location from "expo-location";
+import { router } from "expo-router";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  FlatList,
-  Modal,
-  Pressable,
-  Platform,
-  Dimensions,
-  TextInput,
   ActivityIndicator,
+  Dimensions,
+  FlatList,
   Image,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  SectionList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
-import MapView from "@/components/Map";
-import type { Region } from "@/components/Map";
-import * as Location from "expo-location";
-import Bottomnav from "@/components/Bottomnav";
 import { API_BASE } from "../../../src/config";
 
 type Station = {
@@ -39,6 +40,7 @@ type Station = {
   sun_off?: boolean;
   status: string;
   created_at: string;
+  station_type?: string;
 };
 
 type ServiceCategory = {
@@ -173,7 +175,7 @@ export default function ExploreScreen() {
     const load = async () => {
       try {
         const [stRes, svcRes] = await Promise.all([
-          fetch(`${API_BASE}/stations/public`),
+          fetch(`${API_BASE}/stations/public?limit=25`),
           fetch(`${API_BASE}/services/public`),
         ]);
         if (!stRes.ok) throw new Error("Failed to load stations");
@@ -272,7 +274,6 @@ export default function ExploreScreen() {
       }
       return true;
     });
-
     list = [...list].sort((a, b) => {
       switch (sortBy) {
         case "rating":
@@ -297,6 +298,27 @@ export default function ExploreScreen() {
 
     return list;
   }, [stations, services, searchQuery, locationFilter, selectedServices, minRating, sortBy, origin]);
+  const otherStations = useMemo(
+    () => filtered.filter((station) => station.station_type !== "HEV"),
+    [filtered]
+  );
+
+  const hevStations = useMemo(
+    () => filtered.filter((station) => station.station_type === "HEV"),
+    [filtered]
+  );
+
+  const stationSections = useMemo(
+    () => [
+      ...(otherStations.length > 0
+        ? [{ title: "Other Stations", data: otherStations }]
+        : []),
+      ...(hevStations.length > 0
+        ? [{ title: "HEV Stations", data: hevStations }]
+        : []),
+    ],
+    [otherStations, hevStations]
+  );
 
   const activeFilterCount =
     (locationFilter !== "Near me" ? 1 : 0) +
@@ -615,10 +637,13 @@ export default function ExploreScreen() {
           </View>
         </View>
       ) : (
-        <FlatList
-          data={filtered}
+        <SectionList
+          sections={stationSections}
           keyExtractor={(item) => item.id}
           renderItem={renderListRow}
+          renderSectionHeader={({ section: { title } }) => (
+            <Text style={styles.stationSectionTitle}>{title}</Text>
+          )}
           contentContainerStyle={{
             paddingHorizontal: 16,
             paddingBottom: Math.max(insets.bottom, 12) + 80,
@@ -783,6 +808,14 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: "#fffdfb",
+  },
+  stationSectionTitle: {
+    backgroundColor: "#fffdfb",
+    color: "#222",
+    fontSize: 17,
+    fontWeight: "700",
+    paddingBottom: 8,
+    paddingTop: 16,
   },
   topBar: {
     flexDirection: "row",
