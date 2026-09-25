@@ -27,23 +27,30 @@ export default function ProfileSettingsScreen() {
   useHardwareDoubleBackToExit();
   const router = useRouter();
   const { user, loading } = useUser();
-  
+
   /* ================= DATA ================= */
 
   const generalItems = [
     {
-  id: 1,
-  title: "Manage your profile",
-  subtitle: "Change profile picture, name, number & mail",
-  icon: <Feather name="user" size={20} color="#FF7A45" />,
-  route: "/(tabs)/profile/manageProfile/manageprofile",
-},
+      id: 1,
+      title: "Manage your profile",
+      subtitle: "Change profile picture, name, number & mail",
+      icon: <Feather name="user" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/manageProfile/manageprofile",
+    },
     {
       id: 2,
       title: "Change Password",
       subtitle: "Update your account password",
       icon: <Feather name="lock" size={20} color="#FF7A45" />,
       route: "/(tabs)/profile/changePassword/changepassword",
+    },
+    {
+      id: 3,
+      title: "Booking History",
+      subtitle: "View your past and upcoming bookings",
+      icon: <Feather name="clock" size={20} color="#FF7A45" />,
+      route: "/(tabs)/profile/bookingHistory/bookinghistory",
     },
   ];
 
@@ -128,7 +135,7 @@ export default function ProfileSettingsScreen() {
         <TouchableOpacity style={styles.profileCard}>
           <View style={styles.profileLeft}>
             <Image
-source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")}              style={styles.avatar}
+              source={user?.profile_image ? { uri: user.profile_image } : require("../../../assets/images/johndoe.png")} style={styles.avatar}
             />
 
             <View>
@@ -352,5 +359,3 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
 });
-
-
