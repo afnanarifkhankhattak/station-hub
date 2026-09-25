@@ -1,0 +1,333 @@
+[
+  {
+    "id": "hev-blue-area-jinnah-ave-isb",
+    "name": "Electric Vehicle Charging Station",
+    "address": "104 Jinnah Ave, G-7/3 Blue Area",
+    "city": "Islamabad",
+    "phone": "",
+    "website": "",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "CHAdeMO",
+        "kw": 150,
+        "count": 1
+      }
+    ],
+    "latitude": 33.7123093,
+    "longitude": 73.0602395,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-i10-tesla-industries-isb",
+    "name": "Electric Vehicle Charging Station",
+    "address": "Tesla Industries, 81-F Street 6, I-10/3",
+    "city": "Islamabad",
+    "phone": "0319 7709648",
+    "website": "",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "CHAdeMO",
+        "kw": 120,
+        "count": 2
+      }
+    ],
+    "latitude": 33.6531271,
+    "longitude": 73.0390889,
+    "coord_precision": "area"
+  },
+  {
+    "id": "hev-m2-service-area",
+    "name": "Electric Vehicle Charging Station",
+    "address": "M2 Service Area Rd",
+    "city": "Bhera",
+    "phone": "0300 8325438",
+    "website": "",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Unknown",
+        "kw": 120,
+        "count": 2
+      },
+      {
+        "type": "CCS",
+        "kw": 120,
+        "count": 2
+      }
+    ],
+    "latitude": 32.45458,
+    "longitude": 72.88099,
+    "coord_precision": "manual"
+  },
+  {
+    "id": "hev-bmw-sarai-kharbuza-isb",
+    "name": "BMW Destination Charging Station",
+    "address": "Sarai Kharbuza Road, Dhok Paracha",
+    "city": "Islamabad",
+    "phone": "0321 2556100",
+    "website": "https://www.bmw.de/de/index.html",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Type 2",
+        "kw": 22,
+        "count": 1
+      }
+    ],
+    "latitude": 33.7123,
+    "longitude": 73.0602,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-bmw-n5-rwp",
+    "name": "BMW Destination Charging Station",
+    "address": "N-5",
+    "city": "Rawalpindi",
+    "phone": "0321 2556100",
+    "website": "https://www.bmw.de/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Type 2",
+        "kw": 22,
+        "count": 1
+      }
+    ],
+    "latitude": 33.5573563,
+    "longitude": 73.0965871,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-gga-i9-3-isb",
+    "name": "Go Green Avenue i-9/3 EV Charging Station",
+    "address": "Plot 295, Street 1, I-9/3",
+    "city": "Islamabad",
+    "phone": "0320 8555015",
+    "website": "http://gogreenavenue.com/",
+    "opening": "09:00",
+    "closing": "18:00",
+    "connectors": [],
+    "latitude": 33.657548,
+    "longitude": 73.0555648,
+    "coord_precision": "area"
+  },
+  {
+    "id": "hev-bmw-centaurus-isb",
+    "name": "BMW Destination Charging Station",
+    "address": "104 Centaurus Mall, F-8/4",
+    "city": "Islamabad",
+    "phone": "0333 8591244",
+    "website": "https://www.bmw.de/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Type 2",
+        "kw": 22,
+        "count": 3
+      }
+    ],
+    "latitude": 33.7089024,
+    "longitude": 73.0452138,
+    "coord_precision": "area"
+  },
+  {
+    "id": "hev-bmw-gt-road-kharian",
+    "name": "BMW Destination Charging Station",
+    "address": "3 GT Rd",
+    "city": "Kharian",
+    "phone": "0301 8221311",
+    "website": "https://www.bmw.de/de/index.html",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Type 2",
+        "kw": 22,
+        "count": 1
+      }
+    ],
+    "latitude": 33.7123,
+    "longitude": 73.0602,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-ev-wheels-g11-isb",
+    "name": "EV Wheels (Private) Limited",
+    "address": "Office No. 11, 3rd Floor, Al Anayat Mall, G-11 Markaz",
+    "city": "Islamabad",
+    "phone": "(051) 8311638",
+    "website": "https://evwheels.com.pk/",
+    "opening": "09:00",
+    "closing": "18:00",
+    "connectors": [],
+    "latitude": 33.6687742,
+    "longitude": 72.9989071,
+    "coord_precision": "area"
+  },
+  {
+    "id": "hev-defence-colony-peshawar",
+    "name": "Electric Vehicle Charging Station",
+    "address": "AH1, Defence Colony",
+    "city": "Peshawar",
+    "phone": "",
+    "website": "http://www.tesla-pv.com/",
+    "opening": "11:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "CCS",
+        "kw": 60,
+        "count": 2
+      }
+    ],
+    "latitude": 34.0112501,
+    "longitude": 71.5364524,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-go-ev-f7-isb",
+    "name": "Go EV Charging Station",
+    "address": "3, F-7/3",
+    "city": "Islamabad",
+    "phone": "0310 7125385",
+    "website": "https://goevcharger.com/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [],
+    "latitude": 33.7264496,
+    "longitude": 73.0590042,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-bmw-gt-road-kamra-kalan",
+    "name": "BMW Destination Charging Station",
+    "address": "GT Rd, MRF Colony",
+    "city": "Kamra Kalan",
+    "phone": "0321 2556100",
+    "website": "https://www.bmw.de/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Type 2",
+        "kw": 22,
+        "count": 1
+      }
+    ],
+    "latitude": 33.7123,
+    "longitude": 73.0602,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-indigost-chakri",
+    "name": "Indigost Ultra fast EV charging station",
+    "address": "Service Area Lahore-Islamabad Motorway",
+    "city": "Chakri",
+    "phone": "0320 6661367",
+    "website": "",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [],
+    "latitude": 33.7123,
+    "longitude": 73.0602,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-gga-head-office-i9-isb",
+    "name": "Go Green Avenue Head Office EV Charging Solutions",
+    "address": "Plot 363 & 364, Street 5, I-9/3",
+    "city": "Islamabad",
+    "phone": "0320 8553643",
+    "website": "https://gogreenavenue.com/",
+    "opening": "09:00",
+    "closing": "18:00",
+    "connectors": [],
+    "latitude": 33.657548,
+    "longitude": 73.0555648,
+    "coord_precision": "area"
+  },
+  {
+    "id": "hev-gga-bahria-town-rwp",
+    "name": "Go Green Avenue EV Charging Station Bahria Town",
+    "address": "N-5 Near Filter House Islamabad, Bahria Town Sawan",
+    "city": "Rawalpindi",
+    "phone": "0326 8359730",
+    "website": "https://gogreenavenue.com/",
+    "opening": "09:00",
+    "closing": "18:00",
+    "connectors": [],
+    "latitude": 33.7123,
+    "longitude": 73.0602,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-gga-giga-mall-isb",
+    "name": "Go Green Avenue Giga Mall EV Charging Station",
+    "address": "GIGA Mall Parking, Sector F, DHA Phase II",
+    "city": "Islamabad",
+    "phone": "0320 8555015",
+    "website": "https://gogreenavenue.com/",
+    "opening": "11:00",
+    "closing": "23:00",
+    "connectors": [],
+    "latitude": 33.5306585,
+    "longitude": 73.1570314,
+    "coord_precision": "area"
+  },
+  {
+    "id": "hev-evx-murree",
+    "name": "EVX EV Charger",
+    "address": "Musiari Link Rd",
+    "city": "Murree",
+    "phone": "0321 8375220",
+    "website": "https://www.xpengpakistan.com/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [],
+    "latitude": 33.8957843,
+    "longitude": 73.4001578,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-bmw-gt-road-lalamusa",
+    "name": "BMW Destination Charging Station",
+    "address": "GT Rd, Haji Asghar Town",
+    "city": "Lalamusa",
+    "phone": "0321 2556100",
+    "website": "https://www.bmw.de/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [
+      {
+        "type": "Type 2",
+        "kw": 22,
+        "count": 1
+      }
+    ],
+    "latitude": 33.7123,
+    "longitude": 73.0602,
+    "coord_precision": "address"
+  },
+  {
+    "id": "hev-gga-chatta-bakhtawar-isb",
+    "name": "Go Green Avenue Chatta Bakhtawar EV Charging Station",
+    "address": "Chinar St, near Gerry's Visa Office, Chatta Bakhtawar",
+    "city": "Islamabad",
+    "phone": "0326 8359730",
+    "website": "https://gogreenavenue.com/",
+    "opening": "00:00",
+    "closing": "23:59",
+    "connectors": [],
+    "latitude": 33.6654444,
+    "longitude": 73.1538,
+    "coord_precision": "area"
+  }
+]
