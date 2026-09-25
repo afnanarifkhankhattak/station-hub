@@ -20,7 +20,8 @@ import Bottomnav from "@/components/Bottomnav";
 import { Ionicons, FontAwesome5 } from "@expo/vector-icons";
 import { API_BASE } from "../../../src/config"; // adjust relative path as needed
 import { apiFetch } from "../../../src/api";
-
+import About from "@/components/About";
+import HevAbout from "@/components/Hev_About";
 
 const { width } = Dimensions.get("window");
 
@@ -66,6 +67,9 @@ export default function StationDetail() {
   const [submittingRating, setSubmittingRating] = useState(false);
   const [ratingMsg, setRatingMsg] = useState("");
   const [reRating, setReRating] = useState(false);
+
+  // HEV stations don't have car-wash "services" — About vs HevAbout branches on this.
+  const isHev = station?.station_type === "HEV";
 
   useEffect(() => {
     if (!station_id) return;
@@ -189,24 +193,13 @@ export default function StationDetail() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#FDE9E6" />
 
-      {/* HEADER */}
+      {/* HEADER — title on top, back arrow underneath it */}
       <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
-        <TouchableOpacity
-          onPress={uiGoBack}
-          style={{
-            position: "absolute",
-            top: insets.top + 10,
-            left: 16,
-            backgroundColor: "rgba(255,255,255,0.85)",
-            borderRadius: 20,
-            padding: 8,
-            zIndex: 10,
-          }}
-        >
+        <Text style={styles.headerTitle}>{station.name}</Text>
+
+        <TouchableOpacity onPress={uiGoBack} style={styles.backButton}>
           <Ionicons name="arrow-back" size={22} color="#000" />
         </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>{station.name}</Text>
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }}>
@@ -225,6 +218,13 @@ export default function StationDetail() {
           )}
 
           <Text style={styles.stationTitle}>{station.name}</Text>
+
+          {isHev && (
+            <View style={styles.hevPill}>
+              <Ionicons name="flash" size={13} color="#16A34A" />
+              <Text style={styles.hevPillText}>HEV Charging</Text>
+            </View>
+          )}
 
           <View style={styles.row}>
             {[1, 2, 3, 4, 5].map((i) => (
@@ -250,71 +250,17 @@ export default function StationDetail() {
           ) : null}
         </View>
 
-        {/* ABOUT CARD */}
-        <View style={styles.aboutCard}>
-          <Text style={styles.aboutTitle}>About</Text>
-
-          <Text style={styles.aboutText}>{station.description}</Text>
-
-          {/* OFFERED SERVICES — display-only grid, no tiers, not clickable */}
-          <Text style={styles.offeredHeading}>Offered Services:</Text>
-
-          {loadingServices ? (
-            <ActivityIndicator size="small" color="#F97316" style={{ marginVertical: 20 }} />
-          ) : services.length === 0 ? (
-            <Text style={styles.noServicesText}>
-              No services available at this station yet.
-            </Text>
-          ) : (
-            <View style={styles.iconRow}>
-              {services.map((service) => (
-                <View key={service.id} style={styles.iconItem}>
-                  <View style={styles.iconCircle}>
-                    <Ionicons
-                      name={getServiceIcon(service.name)}
-                      size={24}
-                      color="#fff"
-                    />
-                  </View>
-                  <Text style={styles.iconLabel} numberOfLines={2}>
-                    {service.name}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-
-          {/* IMAGE GRID */}
-          <View style={styles.imageGrid}>
-            <Image
-              source={require("../../../assets/images/pic1.png")}
-              style={styles.bigImg}
-            />
-
-            <View style={styles.rightColumn}>
-              <Image
-                source={require("../../../assets/images/pic2.png")}
-                style={styles.smallImg}
-              />
-
-              <Image
-                source={require("../../../assets/images/pic3.png")}
-                style={styles.smallImg}
-              />
-            </View>
-          </View>
-          {/* SCHEDULE BUTTON — cutout effect */}
-          {services.length > 0 && (
-            <View style={styles.scheduleWrapper}>
-              <TouchableOpacity
-                style={styles.scheduleBtn}
-                onPress={() => handleScheduleService(services[0])}
-              >
-                <Text style={styles.buttonText}>Schedule</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
+        {/* ABOUT — HEV stations get charger/location details, others get car-wash services */}
+        {isHev ? (
+          <HevAbout station={station} distanceKm={station._distanceKm} />
+        ) : (
+          <About
+            description={station.description}
+            services={services}
+            loadingServices={loadingServices}
+            onSchedule={handleScheduleService}
+          />
+        )}
 
         {/* RATING SECTION */}
         <View style={styles.ratingCard}>
@@ -414,8 +360,7 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    flexDirection: "row",
-    justifyContent: "flex-start",
+    flexDirection: "column",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -424,8 +369,15 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    flex: 1,
     textAlign: "center",
+  },
+
+  backButton: {
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.85)",
+    borderRadius: 20,
+    padding: 8,
   },
 
   card: {
@@ -446,6 +398,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginTop: 10,
+  },
+
+  hevPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    backgroundColor: "#EAFBF0",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginTop: 6,
+  },
+
+  hevPillText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#16A34A",
+    marginLeft: 4,
   },
 
   row: {
