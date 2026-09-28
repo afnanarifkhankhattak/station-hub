@@ -21,6 +21,14 @@ from services.service_service import seed_default_services_for_owner
 
 # ─── Register ───────────────────────────────────────────────
 def register_user(body: RegisterRequest) -> dict:
+    
+      #  CRITICAL PROTECTION: Reject the admin role explicitly
+    if body.role.strip().lower() == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Registration for the 'admin' role is prohibited through this endpoint."
+        )
+        
     existing = db.collection("users").where("email", "==", body.email).limit(1).get()
     if existing:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
@@ -28,6 +36,7 @@ def register_user(body: RegisterRequest) -> dict:
     user = UserModel(
         full_name=body.full_name,
         email=body.email,
+        role=body.role or "user",  # Default to "user" if no role is provided
         password=hash_password(body.password),
         phone=body.phone or "",
     )
@@ -35,13 +44,16 @@ def register_user(body: RegisterRequest) -> dict:
     doc_ref = db.collection("users").add(user.to_dict())
     user_id = doc_ref[1].id
 
-    # Pre-list essential services for the new station owner (non-blocking on failure).
-    try:
-        seed_default_services_for_owner(user_id)
-    except Exception as e:
-        print(f"Failed to seed default services for user {user_id}: {e}")
+    # Conditional seeding - Only seed default services for certain user roles (non-blocking on failure).
+    if user.role == "station_owner":
+        try:
+            seed_default_services_for_owner(user_id)
+        except Exception as e:
+            print(f"Failed to seed default services for user {user_id}: {e}")
 
-    token = create_access_token({"sub": user_id, "email": body.email})
+    # Generate tokens embedding the dynamic non-admin role
+    token_payload = {"sub": user_id, "email": body.email, "role": user.role}
+    token = create_access_token(token_payload)
     refresh_token = create_refresh_token({"sub": user_id, "email": body.email})
 
     return {
@@ -52,6 +64,7 @@ def register_user(body: RegisterRequest) -> dict:
             "id": user_id,
             "full_name": body.full_name,
             "email": body.email,
+            "role": user.role,
             "phone": body.phone or "",
             "profile_image": "",
         },
@@ -69,8 +82,9 @@ def login_user(body: LoginRequest) -> dict:
 
     if not verify_password(body.password, user["password"]):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+    
 
-    token = create_access_token({"sub": user_doc.id, "email": user["email"]})
+    token = create_access_token({"sub": user_doc.id, "email": user["email"], "role": user.get("role", "user")})
     refresh_token = create_refresh_token({"sub": user_doc.id, "email": user["email"]})
 
     return {
@@ -81,6 +95,7 @@ def login_user(body: LoginRequest) -> dict:
             "id": user_doc.id,
             "full_name": user["full_name"],
             "email": user["email"],
+            "role": user["role"] or "user", 
             "phone": user.get("phone", ""),
             "profile_image": user.get("profile_image", ""),
         },
