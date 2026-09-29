@@ -20,7 +20,7 @@ import { useBookingEvents } from "../../../../context/bookingEventsContext";
 import Bottomnav from "@/components/Bottomnav";
 import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
 import { uiGoBack } from "@/utils/uiGoBack";
-
+import { useLocalSearchParams } from "expo-router";
 
 const TAB_STATUS_MAP: Record<string, string[]> = {
   upcoming: ["pending", "confirmed"],
@@ -42,7 +42,9 @@ const STATUS_STYLES: Record<
 export default function BookingHistoryScreen() {
   useHardwareDoubleBackToExit();
   const { latestEvent } = useBookingEvents();
-  const [activeTab, setActiveTab] = useState("upcoming");
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+const startTab = tab && tab in TAB_STATUS_MAP ? tab : "upcoming";
+const [activeTab, setActiveTab] = useState(startTab);
 
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +80,9 @@ export default function BookingHistoryScreen() {
   const filteredData = bookings.filter((item) =>
     (TAB_STATUS_MAP[activeTab] || []).includes(item.status),
   );
-
+useEffect(() => {
+  if (tab && tab in TAB_STATUS_MAP) setActiveTab(tab);
+}, [tab]);
   const handleCancel = (bookingId: string) => {
     Alert.alert("Cancel Booking", "Are you sure you want to cancel?", [
       { text: "No" },

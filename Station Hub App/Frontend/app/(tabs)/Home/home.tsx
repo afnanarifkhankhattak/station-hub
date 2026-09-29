@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Image,
   TouchableOpacity,
   TextInput,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -17,15 +19,24 @@ import Bottomnav from "@/components/Bottomnav";
 import ExploreStation from "@/components/Explore_station";
 
 import { Ionicons, MaterialIcons, FontAwesome5 } from "@expo/vector-icons";
-import { API_BASE } from "../../../src/config"; // adjust relative path as needed
+import { API_BASE } from "../../../src/config";
 import { useUser } from "../../../context/userContext";
 import { apiFetch } from "../../../src/api";
 import { useHardwareDoubleBackToExit } from "@/hooks/useHardwareDoubleBackToExit";
 
 const SEARCH_DEBOUNCE_MS = 400;
 
+const BOOKING_SHORTCUTS: {
+  key: string;
+  label: string;
+  icon: keyof typeof Ionicons.glyphMap;
+}[] = [
+  { key: "upcoming", label: "Upcoming", icon: "calendar-outline" },
+  { key: "completed", label: "Completed", icon: "checkmark-circle-outline" },
+  { key: "closed", label: "Closed", icon: "close-circle-outline" },
+];
+
 export default function HomeScreen() {
-  // Hardware back only: double-press exits. Never open splash/auth again.
   useHardwareDoubleBackToExit({ allowNavigateBack: false });
 
   const router = useRouter();
@@ -36,8 +47,14 @@ export default function HomeScreen() {
 
   const [searchText, setSearchText] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  // 1. Create the scroll ref here
-  const scrollViewRef = useRef(null);
+
+  // One vertical ScrollView — pass ref + live Y offset down to ExploreStation
+  const scrollViewRef = useRef<ScrollView>(null);
+  const scrollYRef = useRef(0);
+
+  const onScroll = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    scrollYRef.current = e.nativeEvent.contentOffset.y;
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -62,19 +79,29 @@ export default function HomeScreen() {
     };
   }, []);
 
-  // Debounced: wait for the user to stop typing before it feeds the
-  // ExploreStation component below, so it isn't refetching on every
-  // keystroke. This stays on the Home screen — no navigation.
   useEffect(() => {
     const t = setTimeout(() => setDebouncedSearch(searchText), SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(t);
   }, [searchText]);
 
+  const openBookings = (tab: string) => {
+    router.push({
+      pathname: "/(tabs)/profile/bookingHistory/bookinghistory",
+      params: { tab },
+    });
+  };
+
   return (
-    <SafeAreaView style={styles.container}  ref={scrollViewRef}>
-      <ScrollView ref={scrollViewRef} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView
+        ref={scrollViewRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+        onScroll={onScroll}
+        scrollEventThrottle={16}
+      >
         {/* HEADER */}
-        <View  ref={scrollViewRef} style={styles.header}>
+        <View style={styles.header}>
           <View style={styles.userSection}>
             <Image
               source={
@@ -112,7 +139,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* SEARCH BAR (debounced, navigates to Explore) */}
+        {/* SEARCH BAR */}
         <View style={styles.searchBarWrap}>
           <Ionicons name="search" size={18} color="#999" />
           <TextInput
@@ -128,15 +155,44 @@ export default function HomeScreen() {
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ marginTop: 15 }}  ref={scrollViewRef}
+          style={{ marginTop: 15 }}
         >
-          <Image source={require("../../../assets/images/banner1.png")} style={styles.banner} />
-          <Image source={require("../../../assets/images/banner2.png")} style={styles.banner} />
-          <Image source={require("../../../assets/images/banner3.png")} style={styles.banner} />
+          <Image
+            source={require("../../../assets/images/car_wash.png")}
+            style={styles.banner}
+          />
+          <Image
+            source={require("../../../assets/images/autowash.jpg")}
+            style={styles.banner}
+          />
+          <Image
+            source={require("../../../assets/images/car_platform.jpg")}
+            style={styles.banner}
+          />
         </ScrollView>
 
-        {/* CATEGORY */}
-        <Text style={styles.heading}>Service Categories</Text>
+        {/* MY BOOKINGS */}
+        <View style={styles.headingWrap}>
+          <Text style={styles.heading}>My Bookings</Text>
+        </View>
+        <View style={styles.bookingRow}>
+          {BOOKING_SHORTCUTS.map((item) => (
+            <TouchableOpacity
+              key={item.key}
+              style={styles.bookingBtn}
+              activeOpacity={0.8}
+              onPress={() => openBookings(item.key)}
+            >
+              <Ionicons name={item.icon} size={20} color="#FF7A45" />
+              <Text style={styles.bookingBtnText}>{item.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* SERVICE CATEGORIES */}
+        <View style={styles.headingWrap}>
+          <Text style={styles.heading}>Service Categories</Text>
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.categoryCard}>
@@ -160,8 +216,12 @@ export default function HomeScreen() {
           </View>
         </ScrollView>
 
-        {/* EXPLORE STATIONS — categories, sort tabs, list, show-more, all in one component */}
-        <ExploreStation searchQuery={debouncedSearch}  />
+        {/* EXPLORE STATIONS — pass scroll ref + live Y so HEV / Show more work */}
+        <ExploreStation
+          searchQuery={debouncedSearch}
+          scrollRef={scrollViewRef}
+          scrollYRef={scrollYRef}
+        />
       </ScrollView>
 
       <Bottomnav />
@@ -169,7 +229,6 @@ export default function HomeScreen() {
   );
 }
 
-/* STYLES */
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -244,12 +303,44 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  heading: {
-    fontSize: 20,
-    fontWeight: "bold",
+  // Theme pill headings (My Bookings / Service Categories)
+  headingWrap: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFF1E8",
+    borderRadius: 16,
     marginTop: 25,
     marginLeft: 15,
     marginBottom: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+  },
+
+  heading: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FF7A45",
+  },
+
+  bookingRow: {
+    flexDirection: "row",
+    marginHorizontal: 10,
+    gap: 10,
+  },
+
+  bookingBtn: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FFF1E8",
+    borderRadius: 16,
+    paddingVertical: 10,
+  },
+
+  bookingBtnText: {
+    marginTop: 6,
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FF7A45",
   },
 
   categoryCard: {

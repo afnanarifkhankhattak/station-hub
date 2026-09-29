@@ -1,20 +1,21 @@
 import Bottomnav from "@/components/Bottomnav";
 import type { Region } from "@/components/Map";
 import MapView from "@/components/Map";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   Dimensions,
+  Easing,
   FlatList,
   Image,
   Modal,
   Platform,
   Pressable,
   ScrollView,
-  SectionList,
   StyleSheet,
   Text,
   TextInput,
@@ -23,6 +24,8 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { API_BASE } from "../../../src/config";
+
+type Connector = { type?: string; kw?: number; count?: number };
 
 type Station = {
   id: string;
@@ -41,6 +44,21 @@ type Station = {
   status: string;
   created_at: string;
   station_type?: string;
+  connectors?: Connector[];
+};
+
+type RouteStep = {
+  instruction: string;
+  distance: number;
+  duration: number;
+  name?: string;
+};
+
+type NavRoute = {
+  coords: [number, number][];
+  distance: number;
+  duration: number;
+  steps: RouteStep[];
 };
 
 type ServiceCategory = {
@@ -60,7 +78,21 @@ type Service = {
   created_at: string;
 };
 
+type Category = "SERVICE" | "HEV";
 
+const CATEGORY_OPTIONS: {
+  key: Category;
+  label: string;
+  icon: keyof typeof MaterialIcons.glyphMap;
+}[] = [
+  { key: "SERVICE", label: "Service Stations", icon: "local-gas-station" },
+  { key: "HEV", label: "HEV", icon: "ev-station" },
+];
+
+const CATEGORY_TITLE: Record<Category, string> = {
+  SERVICE: "Service Stations",
+  HEV: "HEV Stations",
+};
 
 type SortKey = "nearest" | "rating" | "price_asc" | "price_desc" | "popular";
 
@@ -74,7 +106,12 @@ const SORT_LABELS: Record<SortKey, string> = {
 
 const RATING_OPTIONS = [0, 3.5, 4.0, 4.5] as const;
 
-const { height: SCREEN_H } = Dimensions.get("window");
+const { height: SCREEN_H, width: SCREEN_W } = Dimensions.get("window");
+
+/** Bottom nav approximate height — keep nav panel above it */
+const BOTTOM_NAV_H = 64;
+/** Consider arrived when within this many meters */
+const ARRIVAL_RADIUS_M = 80;
 
 function distanceKm(
   a: { latitude: number; longitude: number },
@@ -104,13 +141,31 @@ function getMinPrice(stationId: string, services: Service[]): number | null {
   return prices.length > 0 ? Math.min(...prices) : null;
 }
 
-function getStationServiceNames(
-  stationId: string,
-  services: Service[]
-): string[] {
+function getStationServiceNames(stationId: string, services: Service[]): string[] {
   return services
     .filter((s) => s.station_ids.includes(stationId))
     .map((s) => s.name);
+}
+
+function getCardChips(item: Station, services: Service[]): string[] {
+  if (item.station_type === "HEV") {
+    const types = (item.connectors || [])
+      .map((c) => c.type)
+      .filter((t): t is string => !!t);
+    return Array.from(new Set(types));
+  }
+  return getStationServiceNames(item.id, services);
+}
+
+function getPriceLabel(item: Station, services: Service[]): string {
+  if (item.station_type === "HEV") {
+    const kws = (item.connectors || [])
+      .map((c) => c.kw)
+      .filter((k): k is number => typeof k === "number");
+    return kws.length > 0 ? `up to ${Math.max(...kws)} kW` : "HEV charging";
+  }
+  const minPrice = getMinPrice(item.id, services);
+  return minPrice != null ? `from Rs ${minPrice}` : "No services";
 }
 
 function mapServiceToCategory(name: string): string {
@@ -123,14 +178,88 @@ function mapServiceToCategory(name: string): string {
   return name;
 }
 
+async function fetchRoute(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+): Promise<NavRoute> {
+  const url =
+    `https://router.project-osrm.org/route/v1/driving/` +
+    `${from.longitude},${from.latitude};${to.longitude},${to.latitude}` +
+    `?overview=full&geometries=geojson&steps=true`;
+
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Could not get route");
+  const data = await res.json();
+  if (data.code !== "Ok" || !data.routes?.[0]) {
+    throw new Error("No route found");
+  }
+
+  const route = data.routes[0];
+  const coords: [number, number][] = route.geometry.coordinates.map(
+    (c: [number, number]) => [c[1], c[0]]
+  );
+
+  const steps: RouteStep[] = [];
+  for (const leg of route.legs || []) {
+    for (const step of leg.steps || []) {
+      const man = step.maneuver || {};
+      const type = man.type || "";
+      const modifier = man.modifier || "";
+      let instruction = step.name
+        ? `${type} ${modifier} onto ${step.name}`.trim()
+        : `${type} ${modifier}`.trim();
+      if (!instruction || instruction === " ") instruction = "Continue";
+      instruction = instruction
+        .replace(/^depart\s*/i, "Start")
+        .replace(/^arrive\s*/i, "Arrive")
+        .replace(/^turn\s+/i, "Turn ")
+        .replace(/^new name\s*/i, "Continue on ");
+      steps.push({
+        instruction: instruction.charAt(0).toUpperCase() + instruction.slice(1),
+        distance: step.distance || 0,
+        duration: step.duration || 0,
+        name: step.name,
+      });
+    }
+  }
+
+  return {
+    coords,
+    distance: route.distance,
+    duration: route.duration,
+    steps,
+  };
+}
+
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<React.ElementRef<typeof MapView>>(null);
 
-  const [stations, setStations] = useState<Station[]>([]);
+  const [category, setCategory] = useState<Category>("SERVICE");
+  const [uiCategory, setUiCategory] = useState<Category>("SERVICE");
+  const [stationsByCat, setStationsByCat] = useState<Record<Category, Station[]>>({
+    SERVICE: [],
+    HEV: [],
+  });
+  const [loadingByCat, setLoadingByCat] = useState<Record<Category, boolean>>({
+    SERVICE: true,
+    HEV: true,
+  });
+  const [errorByCat, setErrorByCat] = useState<Record<Category, string>>({
+    SERVICE: "",
+    HEV: "",
+  });
   const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+
+  const stations = stationsByCat[category];
+  const loading = loadingByCat[category];
+  const error = errorByCat[category];
+
+  const contentOpacity = useRef(new Animated.Value(1)).current;
+  const indicatorX = useRef(new Animated.Value(0)).current;
+  const switchingRef = useRef(false);
+  const [segWidth, setSegWidth] = useState(0);
+  const segHalf = Math.max(segWidth - 6, 0) / 2;
 
   const [userCoords, setUserCoords] = useState<{
     latitude: number;
@@ -140,10 +269,7 @@ export default function ExploreScreen() {
   const DEMO_CENTER = useMemo(
     () =>
       stations.length > 0
-        ? {
-            latitude: stations[0].latitude,
-            longitude: stations[0].longitude,
-          }
+        ? { latitude: stations[0].latitude, longitude: stations[0].longitude }
         : { latitude: 33.6844, longitude: 73.0479 },
     [stations]
   );
@@ -154,6 +280,14 @@ export default function ExploreScreen() {
     latitudeDelta: 0.06,
     longitudeDelta: 0.06,
   });
+
+  // ── Navigation state ──────────────────────────────────────────────
+  const [navigating, setNavigating] = useState(false);
+  const [navLoading, setNavLoading] = useState(false);
+  const [navRoute, setNavRoute] = useState<NavRoute | null>(null);
+  const [navError, setNavError] = useState("");
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const [navDestination, setNavDestination] = useState<Station | null>(null);
 
   const [viewMode, setViewMode] = useState<"map" | "list">("map");
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -170,32 +304,55 @@ export default function ExploreScreen() {
   const [draftRating, setDraftRating] = useState(0);
   const [draftSort, setDraftSort] = useState<SortKey>("nearest");
 
+  // Space reserved under content so it sits above Bottomnav
+  const bottomChrome = BOTTOM_NAV_H + Math.max(insets.bottom, 8);
+
+  // ── Load stations + services ───────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
-    const load = async () => {
+
+    const loadCategory = async (cat: Category) => {
       try {
-        const [stRes, svcRes] = await Promise.all([
-          fetch(`${API_BASE}/stations/public?limit=25`),
-          fetch(`${API_BASE}/services/public`),
-        ]);
-        if (!stRes.ok) throw new Error("Failed to load stations");
-        if (!svcRes.ok) throw new Error("Failed to load services");
-        const stData = await stRes.json();
-        const svcData = await svcRes.json();
+        const type = cat === "HEV" ? "HEV" : "EV";
+        const res = await fetch(
+          `${API_BASE}/stations/public?limit=50&station_type=${type}`
+        );
+        if (!res.ok) throw new Error("Failed to load stations");
+        const data = await res.json();
         if (cancelled) return;
-        setStations(stData.stations || []);
-        setServices(svcData.services || []);
+        setStationsByCat((prev) => ({ ...prev, [cat]: data.stations || [] }));
       } catch (e: any) {
-        if (!cancelled) setError(e.message || "Failed to load data");
+        if (!cancelled) {
+          setErrorByCat((prev) => ({
+            ...prev,
+            [cat]: e.message || "Failed to load data",
+          }));
+        }
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoadingByCat((prev) => ({ ...prev, [cat]: false }));
       }
     };
-    load();
-    return () => { cancelled = true; };
+
+    const loadServices = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/services/public`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setServices(data.services || []);
+      } catch {
+        // optional
+      }
+    };
+
+    loadCategory("SERVICE");
+    loadCategory("HEV");
+    loadServices();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Auto-request location on mount and watch for updates
+  // ── Location watch ────────────────────────────────────────────────
   useEffect(() => {
     let watchId: Location.LocationSubscription;
     let cancelled = false;
@@ -208,8 +365,8 @@ export default function ExploreScreen() {
         watchId = await Location.watchPositionAsync(
           {
             accuracy: Location.Accuracy.Balanced,
-            timeInterval: 5000,
-            distanceInterval: 10,
+            timeInterval: 3000,
+            distanceInterval: 8,
           },
           (loc) => {
             if (cancelled) return;
@@ -218,7 +375,6 @@ export default function ExploreScreen() {
               longitude: loc.coords.longitude,
             };
             setUserCoords(coords);
-            // Update the blue dot on map via new imperative method
             mapRef.current?.setUserLocation?.(coords.latitude, coords.longitude);
           }
         );
@@ -230,18 +386,33 @@ export default function ExploreScreen() {
     startWatching();
     return () => {
       cancelled = true;
-      if (watchId) {
-        watchId.remove();
-      }
+      if (watchId) watchId.remove();
     };
   }, []);
 
-  // Enable user location dot on map when we have coordinates
   useEffect(() => {
     if (userCoords) {
       mapRef.current?.setUserLocationEnabled?.(true);
     }
   }, [userCoords]);
+
+  // ── Arrival detection: close nav + reopen station sheet ───────────
+  useEffect(() => {
+    if (!navigating || !navDestination || !userCoords) return;
+
+    const distM = distanceKm(userCoords, navDestination) * 1000;
+    if (distM <= ARRIVAL_RADIUS_M) {
+      // Arrived — stop navigation, clear route, sheet will show again
+      setNavigating(false);
+      setNavRoute(null);
+      setNavError("");
+      setActiveStepIndex(0);
+      setNavDestination(null);
+      mapRef.current?.clearRoute?.();
+      // Keep station selected so the card is highlighted
+      setSelectedId(navDestination.id);
+    }
+  }, [userCoords, navigating, navDestination]);
 
   const origin = userCoords ?? DEMO_CENTER;
 
@@ -264,12 +435,10 @@ export default function ExploreScreen() {
       if (locationFilter !== "Near me" && s.city !== locationFilter) return false;
       if (minRating > 0 && s.avg_rating < minRating) return false;
       if (selectedServices.length > 0) {
-        const stationSvcNames = getStationServiceNames(s.id, services).map(
-          (n) => mapServiceToCategory(n)
+        const stationSvcNames = getStationServiceNames(s.id, services).map((n) =>
+          mapServiceToCategory(n)
         );
-        if (
-          !selectedServices.every((svc) => stationSvcNames.includes(svc))
-        )
+        if (!selectedServices.every((svc) => stationSvcNames.includes(svc)))
           return false;
       }
       return true;
@@ -295,30 +464,17 @@ export default function ExploreScreen() {
           return distanceKm(origin, a) - distanceKm(origin, b);
       }
     });
-
     return list;
-  }, [stations, services, searchQuery, locationFilter, selectedServices, minRating, sortBy, origin]);
-  const otherStations = useMemo(
-    () => filtered.filter((station) => station.station_type !== "HEV"),
-    [filtered]
-  );
-
-  const hevStations = useMemo(
-    () => filtered.filter((station) => station.station_type === "HEV"),
-    [filtered]
-  );
-
-  const stationSections = useMemo(
-    () => [
-      ...(otherStations.length > 0
-        ? [{ title: "Other Stations", data: otherStations }]
-        : []),
-      ...(hevStations.length > 0
-        ? [{ title: "HEV Stations", data: hevStations }]
-        : []),
-    ],
-    [otherStations, hevStations]
-  );
+  }, [
+    stations,
+    services,
+    searchQuery,
+    locationFilter,
+    selectedServices,
+    minRating,
+    sortBy,
+    origin,
+  ]);
 
   const activeFilterCount =
     (locationFilter !== "Near me" ? 1 : 0) +
@@ -326,6 +482,113 @@ export default function ExploreScreen() {
     (minRating > 0 ? 1 : 0) +
     (sortBy !== "nearest" ? 1 : 0) +
     (searchQuery.trim().length > 0 ? 1 : 0);
+
+  const switchCategory = useCallback(
+    (next: Category) => {
+      if (next === category || switchingRef.current) return;
+      switchingRef.current = true;
+      setUiCategory(next);
+
+      Animated.timing(indicatorX, {
+        toValue: next === "HEV" ? 1 : 0,
+        duration: 260,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }).start();
+
+      Animated.timing(contentOpacity, {
+        toValue: 0,
+        duration: 130,
+        useNativeDriver: true,
+      }).start(() => {
+        setCategory(next);
+        setSelectedId(null);
+        setLocationFilter("Near me");
+        setSelectedServices([]);
+        // leave navigation if switching category
+        if (navigating) {
+          setNavigating(false);
+          setNavRoute(null);
+          setNavDestination(null);
+          mapRef.current?.clearRoute?.();
+        }
+        Animated.timing(contentOpacity, {
+          toValue: 1,
+          duration: 230,
+          useNativeDriver: true,
+        }).start(() => {
+          switchingRef.current = false;
+        });
+      });
+    },
+    [category, contentOpacity, indicatorX, navigating]
+  );
+
+  // ── Navigation helpers ────────────────────────────────────────────
+  const runNavigation = async (
+    from: { latitude: number; longitude: number },
+    station: Station
+  ) => {
+    setNavLoading(true);
+    setNavError("");
+    setNavigating(true);
+    setActiveStepIndex(0);
+    setNavDestination(station);
+    try {
+      const route = await fetchRoute(from, {
+        latitude: station.latitude,
+        longitude: station.longitude,
+      });
+      setNavRoute(route);
+      mapRef.current?.showRoute?.(route.coords);
+    } catch (e: any) {
+      setNavError(e?.message || "Failed to get directions");
+      setNavigating(false);
+      setNavRoute(null);
+      setNavDestination(null);
+    } finally {
+      setNavLoading(false);
+    }
+  };
+
+  const startDirections = useCallback(
+    async (station: Station) => {
+      if (!userCoords) {
+        try {
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== "granted") {
+            setNavError("Location permission needed for directions");
+            setNavigating(true); // so error panel shows
+            return;
+          }
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Balanced,
+          });
+          const coords = {
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          };
+          setUserCoords(coords);
+          await runNavigation(coords, station);
+        } catch {
+          setNavError("Could not get your location");
+          setNavigating(true);
+        }
+        return;
+      }
+      await runNavigation(userCoords, station);
+    },
+    [userCoords]
+  );
+
+  const stopNavigation = useCallback(() => {
+    setNavigating(false);
+    setNavRoute(null);
+    setNavError("");
+    setActiveStepIndex(0);
+    setNavDestination(null);
+    mapRef.current?.clearRoute?.();
+  }, []);
 
   const locateMe = async () => {
     try {
@@ -393,8 +656,7 @@ export default function ExploreScreen() {
   const renderStationCard = ({ item }: { item: Station }) => {
     const selected = item.id === selectedId;
     const km = distanceKm(origin, item);
-    const minPrice = getMinPrice(item.id, services);
-    const stationSvcNames = getStationServiceNames(item.id, services);
+    const chips = getCardChips(item, services);
     const isPopular = item.booking_count >= 5;
     return (
       <TouchableOpacity
@@ -426,20 +688,16 @@ export default function ExploreScreen() {
             {(item.avg_rating ?? 0).toFixed(1)} ({item.rating_count ?? 0})
           </Text>
           <Text style={styles.dot}>·</Text>
-          <Text style={styles.cardPrice}>
-            {minPrice != null ? `from Rs ${minPrice}` : "No services"}
-          </Text>
+          <Text style={styles.cardPrice}>{getPriceLabel(item, services)}</Text>
         </View>
         <View style={styles.serviceRow}>
-          {stationSvcNames.slice(0, 3).map((svc) => (
+          {chips.slice(0, 3).map((svc) => (
             <View key={svc} style={styles.serviceChip}>
               <Text style={styles.serviceChipText}>{svc}</Text>
             </View>
           ))}
-          {stationSvcNames.length > 3 ? (
-            <Text style={styles.moreServices}>
-              +{stationSvcNames.length - 3}
-            </Text>
+          {chips.length > 3 ? (
+            <Text style={styles.moreServices}>+{chips.length - 3}</Text>
           ) : null}
         </View>
       </TouchableOpacity>
@@ -448,8 +706,7 @@ export default function ExploreScreen() {
 
   const renderListRow = ({ item }: { item: Station }) => {
     const km = distanceKm(origin, item);
-    const minPrice = getMinPrice(item.id, services);
-    const stationSvcNames = getStationServiceNames(item.id, services);
+    const chips = getCardChips(item, services);
     const isPopular = item.booking_count >= 5;
     return (
       <Pressable
@@ -469,7 +726,11 @@ export default function ExploreScreen() {
             <Image source={{ uri: item.image_url }} style={styles.rowAvatar} />
           ) : (
             <View style={styles.rowAvatarFallback}>
-              <Ionicons name="car-sport-outline" size={24} color="#fff" />
+              <Ionicons
+                name={item.station_type === "HEV" ? "flash" : "car-sport-outline"}
+                size={24}
+                color="#fff"
+              />
             </View>
           )}
         </View>
@@ -485,20 +746,18 @@ export default function ExploreScreen() {
             ) : null}
           </View>
           <Text style={styles.rowAddress} numberOfLines={1}>
-            {[item.address, item.city].filter(Boolean).join(", ") || "Unknown"}{" "}
-            · {km.toFixed(1)} km
+            {[item.address, item.city].filter(Boolean).join(", ") || "Unknown"} ·{" "}
+            {km.toFixed(1)} km
           </Text>
           <View style={styles.rowBottom}>
             <View style={styles.rowChips}>
-              {stationSvcNames.slice(0, 2).map((svc) => (
+              {chips.slice(0, 2).map((svc) => (
                 <View key={svc} style={styles.rowChip}>
                   <Text style={styles.rowChipText}>{svc}</Text>
                 </View>
               ))}
             </View>
-            <Text style={styles.rowPrice}>
-              {minPrice != null ? `from Rs ${minPrice}` : "No services"}
-            </Text>
+            <Text style={styles.rowPrice}>{getPriceLabel(item, services)}</Text>
           </View>
         </View>
         <View style={styles.rowRight}>
@@ -516,9 +775,12 @@ export default function ExploreScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.root}>
+    <SafeAreaView style={styles.root} edges={["top"]}>
       <View style={styles.topBar}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.replace("/Home/home")}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.replace("/Home/home")}
+        >
           <Ionicons name="arrow-back" size={22} color="#333" />
         </TouchableOpacity>
         <View style={styles.searchFake}>
@@ -542,6 +804,50 @@ export default function ExploreScreen() {
         </TouchableOpacity>
       </View>
 
+      <View
+        style={styles.catRow}
+        onLayout={(e) => setSegWidth(e.nativeEvent.layout.width)}
+      >
+        {segHalf > 0 ? (
+          <Animated.View
+            style={[
+              styles.catIndicator,
+              {
+                width: segHalf,
+                transform: [
+                  {
+                    translateX: indicatorX.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, segHalf],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        ) : null}
+        {CATEGORY_OPTIONS.map((opt) => {
+          const active = uiCategory === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              style={styles.catBtn}
+              activeOpacity={0.8}
+              onPress={() => switchCategory(opt.key)}
+            >
+              <MaterialIcons
+                name={opt.icon}
+                size={16}
+                color={active ? "#fff" : BRAND_DARK}
+              />
+              <Text style={[styles.catText, active && styles.catTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       <View style={styles.toggleRow}>
         <TouchableOpacity
           style={[styles.toggleBtn, viewMode === "map" && styles.toggleBtnOn]}
@@ -560,7 +866,10 @@ export default function ExploreScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={[styles.toggleBtn, viewMode === "list" && styles.toggleBtnOn]}
-          onPress={() => setViewMode("list")}
+          onPress={() => {
+            if (navigating) stopNavigation();
+            setViewMode("list");
+          }}
         >
           <Ionicons
             name="list-outline"
@@ -568,7 +877,10 @@ export default function ExploreScreen() {
             color={viewMode === "list" ? "#fff" : "#333"}
           />
           <Text
-            style={[styles.toggleText, viewMode === "list" && styles.toggleTextOn]}
+            style={[
+              styles.toggleText,
+              viewMode === "list" && styles.toggleTextOn,
+            ]}
           >
             List
           </Text>
@@ -605,60 +917,189 @@ export default function ExploreScreen() {
             />
           )}
 
-          <TouchableOpacity style={styles.locateBtn} onPress={locateMe}>
+          {/* Locate me — sits above sheets */}
+          <TouchableOpacity
+            style={[
+              styles.locateBtn,
+              {
+                bottom: navigating
+                  ? bottomChrome + Math.min(SCREEN_H * 0.28, 220)
+                  : bottomChrome + Math.min(SCREEN_H * 0.32, 260),
+              },
+            ]}
+            onPress={locateMe}
+          >
             <Ionicons name="locate" size={22} color="#111" />
           </TouchableOpacity>
 
-          <View
-            style={[
-              styles.sheet,
-              { paddingBottom: Math.max(insets.bottom, 12) + 80 },
-            ]}
-          >
-            <View style={styles.sheetHandle} />
-            <Text style={styles.sheetTitle}>
-              {filtered.length} station
-              {filtered.length === 1 ? "" : "s"} nearby
-            </Text>
-            {filtered.length === 0 ? (
-              <Text style={styles.emptyText}>
-                No stations match. Open filters and clear some options.
+          {/* Get Directions — only when a station is selected and NOT navigating */}
+          {selectedId && !navigating ? (
+            <TouchableOpacity
+              style={[
+                styles.directionsBtn,
+                {
+                  bottom: bottomChrome + Math.min(SCREEN_H * 0.32, 260) + 56,
+                },
+              ]}
+              activeOpacity={0.85}
+              onPress={() => {
+                const station = filtered.find((s) => s.id === selectedId);
+                if (station) startDirections(station);
+              }}
+            >
+              <Ionicons name="navigate" size={16} color="#fff" />
+              <Text style={styles.directionsBtnText}>
+                {navLoading ? "Getting route..." : "Get Directions"}
               </Text>
-            ) : (
-              <FlatList
-                data={filtered}
-                keyExtractor={(item) => item.id}
-                renderItem={renderStationCard}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 12, gap: 10 }}
-              />
-            )}
-          </View>
+            </TouchableOpacity>
+          ) : null}
+
+          {/* Station cards sheet — HIDDEN while navigating */}
+          {!navigating ? (
+            <Animated.View
+              style={[
+                styles.sheet,
+                {
+                  paddingBottom: bottomChrome + 12,
+                  maxHeight: SCREEN_H * 0.38,
+                  opacity: contentOpacity,
+                },
+              ]}
+            >
+              <View style={styles.sheetHandle} />
+              <Text style={styles.sheetTitle}>
+                {filtered.length}{" "}
+                {category === "HEV" ? "HEV station" : "service station"}
+                {filtered.length === 1 ? "" : "s"} nearby
+              </Text>
+              {filtered.length === 0 ? (
+                <Text style={styles.emptyText}>
+                  {loading
+                    ? "Loading stations..."
+                    : "No stations match. Open filters and clear some options."}
+                </Text>
+              ) : (
+                <FlatList
+                  data={filtered}
+                  keyExtractor={(item) => item.id}
+                  renderItem={renderStationCard}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ paddingHorizontal: 12, gap: 10 }}
+                />
+              )}
+            </Animated.View>
+          ) : null}
+
+          {/* Navigation panel — ABOVE bottom nav */}
+          {navigating ? (
+            <View
+              style={[
+                styles.navPanel,
+                {
+                  bottom: bottomChrome,
+                  maxHeight: Math.min(SCREEN_H * 0.32, 240),
+                  paddingBottom: 12,
+                },
+              ]}
+            >
+              {navLoading ? (
+                <View style={styles.navLoadingRow}>
+                  <ActivityIndicator color="#FF7A00" />
+                  <Text style={styles.navLoadingText}>Calculating route...</Text>
+                </View>
+              ) : navError ? (
+                <View style={styles.navLoadingRow}>
+                  <Text style={[styles.navLoadingText, { color: "#e74c3c", flex: 1 }]}>
+                    {navError}
+                  </Text>
+                  <TouchableOpacity onPress={stopNavigation}>
+                    <Text style={styles.navCloseText}>Close</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : navRoute ? (
+                <>
+                  <View style={styles.navHeader}>
+                    <View>
+                      <Text style={styles.navDistance}>
+                        {(navRoute.distance / 1000).toFixed(1)} km
+                      </Text>
+                      <Text style={styles.navEta}>
+                        {Math.round(navRoute.duration / 60)} min
+                        {navDestination ? ` · ${navDestination.name}` : ""}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.navExitBtn}
+                      onPress={stopNavigation}
+                    >
+                      <Ionicons name="close" size={18} color="#fff" />
+                      <Text style={styles.navExitText}>Exit</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingVertical: 6 }}
+                  >
+                    {navRoute.steps.map((step, i) => (
+                      <View
+                        key={i}
+                        style={[
+                          styles.navStepCard,
+                          { width: Math.min(SCREEN_W * 0.42, 170) },
+                          i === activeStepIndex && styles.navStepCardActive,
+                        ]}
+                      >
+                        <Text style={styles.navStepIndex}>{i + 1}</Text>
+                        <Text style={styles.navStepText} numberOfLines={2}>
+                          {step.instruction}
+                        </Text>
+                        <Text style={styles.navStepDist}>
+                          {step.distance >= 1000
+                            ? `${(step.distance / 1000).toFixed(1)} km`
+                            : `${Math.round(step.distance)} m`}
+                        </Text>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </>
+              ) : null}
+            </View>
+          ) : null}
         </View>
       ) : (
-        <SectionList
-          sections={stationSections}
-          keyExtractor={(item) => item.id}
-          renderItem={renderListRow}
-          renderSectionHeader={({ section: { title } }) => (
-            <Text style={styles.stationSectionTitle}>{title}</Text>
-          )}
-          contentContainerStyle={{
-            paddingHorizontal: 16,
-            paddingBottom: Math.max(insets.bottom, 12) + 80,
-          }}
-          ListEmptyComponent={
-            <Text style={styles.emptyText}>
-              {loading
-                ? "Loading stations..."
-                : error
-                  ? error
-                  : "No stations match. Open filters and clear some options."}
-            </Text>
-          }
-        />
+        <Animated.View style={{ flex: 1, opacity: contentOpacity }}>
+          <FlatList
+            data={filtered}
+            keyExtractor={(item) => item.id}
+            renderItem={renderListRow}
+            initialNumToRender={10}
+            maxToRenderPerBatch={10}
+            windowSize={7}
+            ListHeaderComponent={
+              <Text style={styles.stationSectionTitle}>
+                {CATEGORY_TITLE[category]}
+              </Text>
+            }
+            contentContainerStyle={{
+              paddingHorizontal: 16,
+              paddingBottom: bottomChrome + 16,
+            }}
+            ListEmptyComponent={
+              <Text style={styles.emptyText}>
+                {loading
+                  ? "Loading stations..."
+                  : error
+                    ? error
+                    : "No stations match. Open filters and clear some options."}
+              </Text>
+            }
+          />
+        </Animated.View>
       )}
+
       {loading ? (
         <View style={styles.loadingBanner}>
           <ActivityIndicator color="#FF7A00" size="small" />
@@ -668,7 +1109,9 @@ export default function ExploreScreen() {
       {!loading && error ? (
         <View style={styles.loadingBanner}>
           <Ionicons name="cloud-offline-outline" size={16} color="#e74c3c" />
-          <Text style={[styles.loadingBannerText, { color: "#e74c3c" }]}>{error}</Text>
+          <Text style={[styles.loadingBannerText, { color: "#e74c3c" }]}>
+            {error}
+          </Text>
         </View>
       ) : null}
 
@@ -763,6 +1206,7 @@ export default function ExploreScreen() {
           </View>
         </View>
       </Modal>
+
       <Bottomnav />
     </SafeAreaView>
   );
@@ -876,6 +1320,38 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "700",
   },
+  catRow: {
+    flexDirection: "row",
+    marginHorizontal: 12,
+    marginTop: 10,
+    backgroundColor: "#FFF1E8",
+    borderRadius: 14,
+    padding: 3,
+  },
+  catIndicator: {
+    position: "absolute",
+    top: 3,
+    left: 3,
+    bottom: 3,
+    borderRadius: 11,
+    backgroundColor: BRAND_DARK,
+  },
+  catBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+  },
+  catText: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: BRAND_DARK,
+  },
+  catTextActive: {
+    color: "#fff",
+  },
   chip: {
     flexDirection: "row",
     alignItems: "center",
@@ -885,7 +1361,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: "#E5E5E5",
-    marginRight: 0,
   },
   chipActive: {
     backgroundColor: BRAND,
@@ -948,18 +1423,18 @@ const styles = StyleSheet.create({
   locateBtn: {
     position: "absolute",
     right: 14,
-    bottom: SCREEN_H * 0.34,
     width: 44,
     height: 44,
     borderRadius: 22,
     backgroundColor: "#fff",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4,
+    elevation: 6,
     shadowColor: "#000",
     shadowOpacity: 0.15,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
+    zIndex: 20,
   },
   sheet: {
     position: "absolute",
@@ -970,12 +1445,12 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 18,
     borderTopRightRadius: 18,
     paddingTop: 8,
-    maxHeight: SCREEN_H * 0.38,
     elevation: 12,
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 10,
     shadowOffset: { width: 0, height: -4 },
+    zIndex: 10,
   },
   sheetHandle: {
     alignSelf: "center",
@@ -993,7 +1468,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   card: {
-    width: 260,
+    width: Math.min(SCREEN_W * 0.68, 260),
     backgroundColor: "#FAFAFA",
     borderRadius: 14,
     padding: 12,
@@ -1257,5 +1732,121 @@ const styles = StyleSheet.create({
   loadingBannerText: {
     color: "#888",
     fontSize: 13,
+  },
+
+  // Directions floating button
+  directionsBtn: {
+    position: "absolute",
+    alignSelf: "center",
+    left: 16,
+    right: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: BRAND,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    elevation: 8,
+    shadowColor: "#000",
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    zIndex: 25,
+  },
+  directionsBtnText: {
+    color: "#fff",
+    fontSize: 15,
+    fontWeight: "700",
+  },
+
+  // Navigation panel (above Bottomnav)
+  navPanel: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 16,
+    zIndex: 30,
+  },
+  navLoadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 12,
+  },
+  navLoadingText: {
+    fontSize: 14,
+    color: "#333",
+  },
+  navCloseText: {
+    color: BRAND,
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  navHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
+  navDistance: {
+    fontSize: 22,
+    fontWeight: "800",
+    color: "#111",
+  },
+  navEta: {
+    fontSize: 13,
+    color: "#666",
+    marginTop: 2,
+    maxWidth: SCREEN_W * 0.55,
+  },
+  navExitBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "#e74c3c",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  navExitText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  navStepCard: {
+    backgroundColor: "#F5F5F5",
+    borderRadius: 10,
+    padding: 10,
+  },
+  navStepCardActive: {
+    backgroundColor: "#FFF3E8",
+    borderWidth: 1,
+    borderColor: BRAND,
+  },
+  navStepIndex: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: BRAND,
+    marginBottom: 4,
+  },
+  navStepText: {
+    fontSize: 13,
+    color: "#222",
+    fontWeight: "500",
+  },
+  navStepDist: {
+    fontSize: 11,
+    color: "#888",
+    marginTop: 6,
   },
 });

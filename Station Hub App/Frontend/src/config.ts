@@ -2,7 +2,7 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-const BACKEND_PORT = process.env.EXPO_PUBLIC_API_PORT || "8000";
+const BACKEND_PORT = process.env.EXPO_PUBLIC_API_PORT || "8081";
 const FORCED_API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const getBaseUrl = () => {

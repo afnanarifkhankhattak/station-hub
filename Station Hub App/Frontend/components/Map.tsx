@@ -33,11 +33,24 @@ function deltaToZoom(delta: number): number {
   return Math.round(Math.log2(360 / delta)) + 1;
 }
 
-const DEF_REGION = { latitude: 33.6844, longitude: 73.0479, latitudeDelta: 0.06, longitudeDelta: 0.06 };
+const DEF_REGION = {
+  latitude: 33.6844,
+  longitude: 73.0479,
+  latitudeDelta: 0.06,
+  longitudeDelta: 0.06,
+};
 
 function buildMapHtml(
   region: Region,
-  markers: { id: string; latitude: number; longitude: number; title?: string; selected?: boolean; popular?: boolean; image_url?: string }[]
+  markers: {
+    id: string;
+    latitude: number;
+    longitude: number;
+    title?: string;
+    selected?: boolean;
+    popular?: boolean;
+    image_url?: string;
+  }[]
 ): string {
   const markersJson = JSON.stringify(markers);
   const initialZoom = deltaToZoom(region.latitudeDelta);
@@ -94,6 +107,7 @@ html,body,#map{width:100%;height:100%;overflow:hidden}
   var initialMarkers = ${markersJson};
   var userDot = null;
   var showUserDot = false;
+  var routeLayer = null;
   var map = L.map("map",{
     center:[reg.latitude,reg.longitude],
     zoom:${initialZoom},
@@ -141,7 +155,6 @@ html,body,#map{width:100%;height:100%;overflow:hidden}
   };
   window.updateMarkers(initialMarkers);
 
-  // user location dot (controlled by parent)
   function setUserDot(lat,lng){
     if(userDot){
       userDot.setLatLng([lat,lng]);
@@ -166,7 +179,27 @@ html,body,#map{width:100%;height:100%;overflow:hidden}
     if(!enabled && userDot){ map.removeLayer(userDot); userDot=null; }
   };
 
-  // region change -> RN
+  // Draw route polyline + fit bounds
+  window.showRoute = function(coords){
+    // coords = [[lat,lng], [lat,lng], ...]
+    if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
+    if(!coords || !coords.length) return;
+    routeLayer = L.polyline(coords, {
+      color: "#4285F4",
+      weight: 6,
+      opacity: 0.9,
+      lineJoin: "round",
+      lineCap: "round"
+    }).addTo(map);
+    try {
+      map.fitBounds(routeLayer.getBounds(), { padding: [60, 60] });
+    } catch(e) {}
+  };
+
+  window.clearRoute = function(){
+    if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
+  };
+
   map.on("moveend",function(){
     var c = map.getCenter();
     var b = map.getBounds();
@@ -257,6 +290,19 @@ const MapView = React.forwardRef<any, MapViewProps>((props, ref) => {
           true;
         `);
       },
+      showRoute: (coords: [number, number][]) => {
+        // coords: [[lat, lng], ...]
+        webViewRef.current?.injectJavaScript(`
+          if(window.showRoute) window.showRoute(${JSON.stringify(coords)});
+          true;
+        `);
+      },
+      clearRoute: () => {
+        webViewRef.current?.injectJavaScript(`
+          if(window.clearRoute) window.clearRoute();
+          true;
+        `);
+      },
     }),
     []
   );
@@ -290,7 +336,12 @@ const MapView = React.forwardRef<any, MapViewProps>((props, ref) => {
       if(window.__map) window.__map.setView([${r.latitude},${r.longitude}],${zoom});
       true;
     `);
-  }, [props.region?.latitude, props.region?.longitude, props.region?.latitudeDelta, props.region?.longitudeDelta]);
+  }, [
+    props.region?.latitude,
+    props.region?.longitude,
+    props.region?.latitudeDelta,
+    props.region?.longitudeDelta,
+  ]);
 
   useEffect(() => {
     webViewRef.current?.injectJavaScript(`

@@ -3,10 +3,19 @@ import { AppState, Modal, StyleSheet, Text, TouchableOpacity, View } from "react
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import * as Notifications from "expo-notifications";
+import Constants from "expo-constants";
 
 import { API_BASE } from "../src/config";
 import { registerPushToken } from "../src/notifications";
+
+// expo-notifications' remote-push features were removed from Expo Go in SDK 53.
+// Skip loading/using it entirely when running inside Expo Go to avoid a crash.
+const isExpoGo = Constants.appOwnership === "expo";
+
+let Notifications: typeof import("expo-notifications") | null = null;
+if (!isExpoGo) {
+  Notifications = require("expo-notifications");
+}
 
 export type BookingStatusEvent = {
   type: "booking_status_change";
@@ -78,38 +87,49 @@ export function BookingEventsProvider({ children }: { children: React.ReactNode 
       active.current = nextState === "active";
       if (active.current) connect();
     });
-    const notificationSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      const bookingId = response.notification.request.content.data.booking_id;
-      if (typeof bookingId === "string") openBooking(bookingId);
-    });
-    const foregroundNotificationSubscription = Notifications.addNotificationReceivedListener((notification) => {
-      const data = notification.request.content.data;
-      if (typeof data.booking_id === "string" && typeof data.new_status === "string") {
-        handleEvent({
-          type: "booking_status_change",
-          event_id: `${data.booking_id}:${data.new_status}:${data.timestamp || notification.date}`,
-          booking_id: data.booking_id,
-          new_status: data.new_status,
-          timestamp: String(data.timestamp || notification.date),
-          message: notification.request.content.title || "Booking updated",
-        }, active.current);
-      }
-    });
 
-    Notifications.getLastNotificationResponseAsync().then((response) => {
-      const bookingId = response?.notification.request.content.data.booking_id;
-      if (typeof bookingId === "string") openBooking(bookingId);
-    });
+    // --- Notification listeners: skipped entirely in Expo Go ---
+    let notificationSubscription: { remove: () => void } | null = null;
+    let foregroundNotificationSubscription: { remove: () => void } | null = null;
 
-    registerPushToken();
+    if (!isExpoGo && Notifications) {
+      notificationSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+        const bookingId = response.notification.request.content.data?.booking_id;
+        if (typeof bookingId === "string") openBooking(bookingId);
+      });
+      foregroundNotificationSubscription = Notifications.addNotificationReceivedListener((notification) => {
+        const data = notification.request.content.data;
+        const bookingId = data?.booking_id;
+        const newStatus = data?.new_status;
+        if (typeof bookingId === "string" && typeof newStatus === "string") {
+          handleEvent({
+            type: "booking_status_change",
+            event_id: `${bookingId}:${newStatus}:${data?.timestamp || notification.date}`,
+            booking_id: bookingId,
+            new_status: newStatus,
+            timestamp: String(data?.timestamp || notification.date),
+            message: notification.request.content.title || "Booking updated",
+          }, active.current);
+        }
+      });
+
+      Notifications.getLastNotificationResponseAsync().then((response) => {
+        const bookingId = response?.notification.request.content.data?.booking_id;
+        if (typeof bookingId === "string") openBooking(bookingId);
+      });
+
+      registerPushToken();
+    }
+    // --- end notification listeners ---
+
     connect();
     return () => {
       disposed = true;
       if (retryTimer.current) clearTimeout(retryTimer.current);
       socket.current?.close();
       appStateSubscription.remove();
-      notificationSubscription.remove();
-      foregroundNotificationSubscription.remove();
+      notificationSubscription?.remove();
+      foregroundNotificationSubscription?.remove();
     };
   }, []);
 
@@ -139,7 +159,6 @@ export function BookingEventsProvider({ children }: { children: React.ReactNode 
 }
 
 export const useBookingEvents = () => useContext(BookingEventsContext);
-
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center", justifyContent: "center", padding: 24 },
   card: { width: "100%", maxWidth: 380, backgroundColor: "#fff", borderRadius: 16, padding: 24, alignItems: "center" },
