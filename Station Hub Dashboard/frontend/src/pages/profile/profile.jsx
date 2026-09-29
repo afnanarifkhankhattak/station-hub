@@ -324,7 +324,7 @@ const Profile = () => {
     (async () => {
       try {
         const stored = JSON.parse(localStorage.getItem("user") || "{}");
-        console.log("stored.avatar_url:", stored.avatar_url); // ← add this
+        // console.log("stored.avatar_url:", stored.avatar_url); // ← add this
 
         const data = await api.get("/profile/");
         const user = data.user || data;
