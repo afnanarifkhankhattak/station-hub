@@ -5,6 +5,7 @@ from typing import Optional
 class RegisterRequest(BaseModel):
     full_name: str = Field(min_length=3, max_length=150)
     email: EmailStr = Field()
+    role: str = Field(default="user")
     password: str
     phone: Optional[str] = None
 
@@ -12,6 +13,7 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
 
 
 class GoogleLoginRequest(BaseModel):

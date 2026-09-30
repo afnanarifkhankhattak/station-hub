@@ -10,7 +10,13 @@ import Serv from "./pages/services/services";
 import Stat from "./pages/Stations/Station";
 import Signup from "./pages/auth/SignupPage";
 import LandingPage from "./pages/LandingPage/LandingPage";
-import ProtectedRoute from "./protectedRoutes";
+import { ProtectedRoute } from "./protectedRoutes";
+import AdminDashboard from "./pages/admin/adminDashboard/AdminDashboard";
+import AdminStations from "./pages/admin/adminStations/AdminStations";
+import Customer from "./pages/admin/customers/Customer";
+import Bookings from "./pages/admin/bookings/Bookings";
+import Reports from "./pages/admin/reports/Reports";
+
 
 function AppRoutes() {
   return (
@@ -22,11 +28,33 @@ function AppRoutes() {
       <Route path="/login" element={<Auth />} />
       <Route path="/signup" element={<Signup />} />
 
-      {/* Protected layout wrapper */}
+
+
+      {/* Admin routes */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={['admin']}>
+            <HomeLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<AdminDashboard />} />
+        <Route path="admin-dashboard" element={<AdminDashboard />} />
+        <Route path="admin-stations" element={<AdminStations />} />
+        <Route path="admin-customers" element={<Customer />} />
+        <Route path="admin-bookings" element={<Bookings />} />
+        <Route path="admin-reports" element={<Reports />} />
+        <Route path="notifications" element={<Notify />} />
+
+      </Route>
+
+
+      {/* Protected routes for regular users */}
       <Route
         path="/"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute allowedRoles={['user', 'admin', 'station_owner']}>
             <HomeLayout />
           </ProtectedRoute>
         }
@@ -36,11 +64,11 @@ function AppRoutes() {
         <Route path="services" element={<Serv />} />
         <Route path="profile" element={<Profile />} />
         <Route path="settings" element={<Settings />} />
-        <Route path="Notify" element={<Notify />} />
+        <Route path="notifications" element={<Notify />} />
       </Route>
 
       {/* fallback */}
-      <Route path="*" element={<Navigate to="/" />} />
+      {/* <Route path="*" element={<Navigate to="/" />} /> */}
     </Routes>
   );
 }

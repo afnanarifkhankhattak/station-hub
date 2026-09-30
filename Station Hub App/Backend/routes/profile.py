@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, UploadFile, File
-from middleware.auth_middleware import get_current_user
+from middleware.auth_middleware import RoleChecker, get_current_user
 from schemas.profile_schemas import UpdateProfileRequest, PrivacyAgreementRequest
 import services.profile_service as profile_service
 
@@ -7,7 +7,8 @@ router = APIRouter(prefix="/profile", tags=["Profile"])
 
 
 @router.get("/")
-def get_profile(current_user: dict = Depends(get_current_user)):
+# def get_profile(current_user: dict = Depends(get_current_user)):
+def get_profile(current_user: dict = Depends(RoleChecker(["admin", "station_owner"]))):
     return profile_service.get_profile(current_user["sub"])
 
 
