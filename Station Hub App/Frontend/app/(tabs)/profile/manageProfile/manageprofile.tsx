@@ -148,7 +148,7 @@ export default function ManageProfileScreen() {
   if (userLoading) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator color="#FF7A45" size="large" />
+        <ActivityIndicator color="#1d8cf8" size="large" />
       </SafeAreaView>
     );
   }
@@ -226,7 +226,7 @@ export default function ManageProfileScreen() {
                 {
                   borderBottomColor:
                     focusedInput === "name"
-                      ? "#FF7A45"
+                      ? "#1d8cf8"
                       : "#E5E7EB",
                 },
               ]}
@@ -254,7 +254,7 @@ export default function ManageProfileScreen() {
                 {
                   borderBottomColor:
                     focusedInput === "phone"
-                      ? "#FF7A45"
+                      ? "#1d8cf8"
                       : "#E5E7EB",
                 },
               ]}
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     right: 0,
-    backgroundColor: "#FF7A45",
+    backgroundColor: "#1d8cf8",
     width: 34,
     height: 34,
     borderRadius: 17,
@@ -402,7 +402,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: "#FF7A45",
+    color: "#1d8cf8",
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
 
   saveBtn: {
     flex: 1,
-    backgroundColor: "#FF7A45",
+    backgroundColor: "#1d8cf8",
     paddingVertical: 14,
     borderRadius: 24,
     alignItems: "center",
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   discardBtn: {
     flex: 1,
     borderWidth: 1.5,
-    borderColor: "#FF7A45",
+    borderColor: "#1d8cf8",
     paddingVertical: 14,
     borderRadius: 24,
     alignItems: "center",
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   },
 
   discardText: {
-    color: "#FF7A45",
+    color: "#1d8cf8",
     fontWeight: "600",
     fontSize: 15,
   },

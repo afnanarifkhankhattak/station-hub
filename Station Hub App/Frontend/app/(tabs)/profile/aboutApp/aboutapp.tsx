@@ -17,22 +17,22 @@ const APP_VERSION = "1.0.0";
 
 const FEATURES = [
   {
-    icon: <Feather name="search" size={18} color="#FF7A45" />,
+    icon: <Feather name="search" size={18} color="#1d8cf8" />,
     title: "Discover Services",
     description: "Browse Basic and Premium car wash and detailing services near you.",
   },
   {
-    icon: <Feather name="calendar" size={18} color="#FF7A45" />,
+    icon: <Feather name="calendar" size={18} color="#1d8cf8" />,
     title: "Easy Booking",
     description: "Pick a station, date, and time slot, then confirm in just a few taps.",
   },
   {
-    icon: <Feather name="clipboard" size={18} color="#FF7A45" />,
+    icon: <Feather name="clipboard" size={18} color="#1d8cf8" />,
     title: "My Booking",
     description: "View and manage your upcoming, completed, and cancelled bookings.",
   },
   {
-    icon: <Feather name="clock" size={18} color="#FF7A45" />,
+    icon: <Feather name="clock" size={18} color="#1d8cf8" />,
     title: "Booking History",
     description: "View all your past and upcoming bookings in one place.",
   },
@@ -123,7 +123,7 @@ export default function AboutAppScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#e2edf5",
   },
 
   gradient: {
@@ -169,6 +169,7 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     marginBottom: 12,
+  backgroundColor: "#e2edf5",
   },
 
   appName: {
@@ -221,7 +222,7 @@ const styles = StyleSheet.create({
   featureIcon: {
     width: 36,
     height: 36,
-    backgroundColor: "#FFF1EB",
+    backgroundColor: "#e2edf5",
     borderRadius: 18,
     justifyContent: "center",
     alignItems: "center",

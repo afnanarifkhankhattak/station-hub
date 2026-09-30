@@ -101,7 +101,7 @@ export default function ServicesScreen() {
                 </View>
 
                 <View style={styles.infoItem}>
-                  <Ionicons name="star" size={14} color="#FF8C42" />
+                  <Ionicons name="star" size={14} color= "#1d8cf8" />
                   <Text style={styles.infoText}>4.0</Text>
                 </View>
 
@@ -143,7 +143,7 @@ export default function ServicesScreen() {
 const styles = StyleSheet.create({
   container: {
   flex: 1,
-  backgroundColor: "#FFF4EC",
+  backgroundColor: "#ffffff",
 },
 
   header: {
@@ -181,7 +181,7 @@ const styles = StyleSheet.create({
   },
 
   activeTab: {
-    backgroundColor: "#FF8C42",
+    backgroundColor: "#1d8cf8",
   },
 
   tabText: {
@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FF8C42",
+    color:  "#1d8cf8",
     marginBottom: 8,
   },
 
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
   },
 
   scheduleBtn: {
-    backgroundColor: "#FF8C42",
+    backgroundColor: "#1d8cf8",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -273,14 +273,14 @@ const styles = StyleSheet.create({
 
   viewBtn: {
     borderWidth: 1,
-    borderColor: "#FF8C42",
+    borderColor:  "#1d8cf8",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
   },
 
   viewText: {
-    color: "#FF8C42",
+    color:  "#1d8cf8",
     fontSize: 12,
     fontWeight: "600",
   },

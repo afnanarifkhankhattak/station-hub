@@ -63,7 +63,7 @@ export default function BottomNav() {
 
   return (
     <LinearGradient
-      colors={["#FFAA33", "#FF7A00", "#ff5500"]}
+      colors={["#1d8cf8", "#1d8cf8", "#1d8cf8"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 0 }}
       style={[styles.container, { height: 75 + insets.bottom, paddingBottom: insets.bottom }]}

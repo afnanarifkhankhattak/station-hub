@@ -129,7 +129,7 @@ export default function BookingConfirmedScreen() {
       {/* LOADING / ERROR */}
       {loading && (
         <View style={{ paddingVertical: 30, alignItems: "center" }}>
-          <ActivityIndicator color="#FF7A00" size="large" />
+          <ActivityIndicator color= "#1d8cf8" size="large" />
         </View>
       )}
 
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
 
   errorText: {
     textAlign: "center",
-    color: "#e74c3c",
+    color: "#1d8cf8",
     marginTop: 20,
     marginHorizontal: 18,
     fontWeight: "600",
@@ -279,12 +279,12 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 12,
     fontWeight: "700",
-    color: "#FF7A00",
+    color:  "#1d8cf8",
     textTransform: "capitalize",
   },
 
   button: {
-    backgroundColor: "#FF7A00",
+    backgroundColor: "#1d8cf8",
     margin: 18,
     padding: 15,
     borderRadius: 12,

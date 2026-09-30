@@ -630,7 +630,7 @@ export default function BookingScreen() {
           {/* STATION CARD */}
           {loadingStations ? (
             <View style={{ paddingVertical: 24, alignItems: "center" }}>
-              <ActivityIndicator color="#FF8C42" />
+              <ActivityIndicator color= "#1d8cf8" />
             </View>
           ) : stationsError ? (
             <Text style={styles.stationError}>{stationsError}</Text>
@@ -649,7 +649,7 @@ export default function BookingScreen() {
                 <Text style={styles.shopName}>{selectedStation.name}</Text>
                 {typeof selectedStation.avg_rating === "number" && (
                   <View style={styles.ratingPill}>
-                    <Ionicons name="star" size={12} color="#FF7A00" />
+                    <Ionicons name="star" size={12} color= "#1d8cf8" />
                     <Text style={styles.ratingText}>
                       {selectedStation.avg_rating.toFixed(1)}
                     </Text>
@@ -683,7 +683,7 @@ export default function BookingScreen() {
           <Text style={styles.sectionTitle}>Select Service</Text>
           {loadingServices ? (
             <ActivityIndicator
-              color="#FF8C42"
+              color= "#1d8cf8"
               style={{ marginLeft: 18, marginTop: 8 }}
             />
           ) : servicesError ? (
@@ -711,7 +711,7 @@ export default function BookingScreen() {
                   >
                     <ServiceIcon
                       name={service.name}
-                      color={isActive ? "#fff" : "#FF7A00"}
+                      color={isActive ? "#fff" :  "#1d8cf8"}
                     />
                     <Text
                       style={[
@@ -834,7 +834,7 @@ export default function BookingScreen() {
 
           {loadingSlots ? (
             <ActivityIndicator
-              color="#FF8C42"
+              color= "#1d8cf8"
               style={{ marginLeft: 18, marginTop: 8 }}
             />
           ) : times.length === 0 ? (
@@ -919,7 +919,7 @@ export default function BookingScreen() {
                       paddingHorizontal: 14,
                       paddingVertical: 8,
                       borderRadius: 20,
-                      backgroundColor: vehicleCategory === cat.id ? "#FF7A00" : "#f0f0f0",
+                      backgroundColor: vehicleCategory === cat.id ?  "#1d8cf8" : "#f0f0f0",
                       marginRight: 8,
                     }}
                   >
@@ -947,7 +947,7 @@ export default function BookingScreen() {
                         paddingHorizontal: 14,
                         paddingVertical: 10,
                         borderRadius: 12,
-                        backgroundColor: selected ? "#FF7A00" : "#f0f0f0",
+                        backgroundColor: selected ?  "#1d8cf8" : "#f0f0f0",
                         borderWidth: selected ? 0 : 1,
                         borderColor: "#e8e8e8",
                       }}
@@ -1151,7 +1151,7 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 5,
     marginHorizontal: 18,
-    backgroundColor: "#fff",
+    backgroundColor: "#ffffff",
     borderRadius: 16,
     padding: 16,
     shadowColor: "#000",
@@ -1182,13 +1182,13 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
 
-  ratingText: { fontSize: 12, fontWeight: "700", color: "#FF7A00" },
-  ratingCount: { fontSize: 11, color: "#a86a2f" },
+  ratingText: { fontSize: 12, fontWeight: "700", color:  "#1d8cf8" },
+  ratingCount: { fontSize: 11, color: "#1d8cf8" },
 
   location: { color: "#666", marginTop: 6, fontSize: 13 },
 
   changeStationBtn: {
-    backgroundColor: "#FF7A00",
+    backgroundColor:  "#1d8cf8",
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
@@ -1256,7 +1256,7 @@ const styles = StyleSheet.create({
   },
 
   paginationDotActive: {
-    backgroundColor: "#FF7A00",
+    backgroundColor:  "#1d8cf8",
     width: 14,
   },
 
@@ -1280,8 +1280,8 @@ const styles = StyleSheet.create({
   },
 
   activeServiceCard: {
-    backgroundColor: "#FF7A00",
-    borderColor: "#FF7A00",
+    backgroundColor:  "#1d8cf8",
+    borderColor:  "#1d8cf8",
   },
 
   serviceCardText: {
@@ -1304,7 +1304,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
 
-  activeDate: { backgroundColor: "#FF7A00", borderColor: "#FF7A00" },
+  activeDate: { backgroundColor:  "#1d8cf8", borderColor:  "#1d8cf8" },
 
   disabledDate: {
     backgroundColor: "#f5f5f5",
@@ -1326,7 +1326,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  activeTime: { backgroundColor: "#FF7A00", borderColor: "#FF7A00" },
+  activeTime: { backgroundColor:  "#1d8cf8", borderColor:  "#1d8cf8" },
 
   disabledTime: { backgroundColor: "#f5f5f5", borderColor: "#e0e0e0" },
 
@@ -1349,13 +1349,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  radioOuterActive: { borderColor: "#FF7A00" },
+  radioOuterActive: { borderColor:  "#1d8cf8" },
 
   radioInner: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: "#FF7A00",
+    backgroundColor:  "#1d8cf8",
   },
 
   radioLabel: { fontSize: 14, fontWeight: "600", color: "#000" },
@@ -1416,18 +1416,18 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
 
-  summaryTotal: { fontSize: 16, fontWeight: "800", color: "#FF7A00" },
+  summaryTotal: { fontSize: 16, fontWeight: "800", color:  "#1d8cf8" },
 
   submitError: {
     marginHorizontal: 18,
     marginTop: 10,
     fontSize: 13,
-    color: "#e74c3c",
+    color: "#1d8cf8",
     fontWeight: "600",
   },
 
   confirmBtn: {
-    backgroundColor: "rgb(255, 122, 0)",
+    backgroundColor: "#1d8cf8",
     margin: 18,
     padding: 15,
     borderRadius: 12,
@@ -1450,7 +1450,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
 
-  activeStationRow: { backgroundColor: "#FF7A00", borderColor: "#FF7A00" },
+  activeStationRow: { backgroundColor:  "#1d8cf8", borderColor:  "#1d8cf8" },
 
   stationName: { fontSize: 14, fontWeight: "700", color: "#000" },
   stationLocation: { fontSize: 12, color: "#777", marginTop: 2 },

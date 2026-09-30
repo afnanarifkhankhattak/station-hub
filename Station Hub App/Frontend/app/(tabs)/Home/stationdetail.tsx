@@ -145,7 +145,7 @@ export default function StationDetail() {
   if (loading) {
     return (
       <View style={[styles.container, styles.centered]}>
-        <ActivityIndicator color="#F97316" size="large" />
+        <ActivityIndicator color="#1d8cf8" size="large" />
       </View>
     );
   }
@@ -232,7 +232,7 @@ export default function StationDetail() {
                 key={i}
                 name={i <= Math.round(avgRating) ? "star" : "star-outline"}
                 size={16}
-                color="#F97316"
+                color="#1d8cf8"
               />
             ))}
             <Text style={{ marginLeft: 6, fontSize: 12 }}>
@@ -279,7 +279,7 @@ export default function StationDetail() {
                     key={i}
                     name={i <= userRating ? "star" : "star-outline"}
                     size={28}
-                    color="#F97316"
+                    color="#1d8cf8"
                   />
                 ))}
               </View>
@@ -305,7 +305,7 @@ export default function StationDetail() {
                     <Ionicons
                       name={i <= selectedRating ? "star" : "star-outline"}
                       size={32}
-                      color="#F97316"
+                      color="#1d8cf8"
                     />
                   </TouchableOpacity>
                 ))}
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   hevPillText: {
     fontSize: 11,
     fontWeight: "700",
-    color: "#16A34A",
+    color: "#1d8cf8",
     marginLeft: 4,
   },
 
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   iconCircle: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#F97316",
+    backgroundColor: "#1d8cf8",
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -519,7 +519,7 @@ const styles = StyleSheet.create({
     paddingRight: 12,
   },
   scheduleBtn: {
-    backgroundColor: "#F97316", // slightly lighter orange
+    backgroundColor: "#1d8cf8", // slightly lighter orange
     paddingVertical: 14,
     paddingHorizontal: 28,
     borderRadius: 24,
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
   },
 
   submitRatingBtn: {
-    backgroundColor: "#F97316",
+    backgroundColor: "#1d8cf8",
     paddingVertical: 12,
     paddingHorizontal: 40,
     borderRadius: 12,

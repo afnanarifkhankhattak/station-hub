@@ -170,7 +170,7 @@ useEffect(() => {
         ListEmptyComponent={
           loading ? (
             <View style={{ marginTop: 60, alignItems: "center" }}>
-              <ActivityIndicator color="#FF7A45" size="large" />
+              <ActivityIndicator color="#1d8cf8" size="large" />
             </View>
           ) : error ? (
             <View style={styles.empty}>
@@ -187,7 +187,7 @@ useEffect(() => {
                       : "time-outline"
                 }
                 size={60}
-                color="#FF7A45"
+                color="#1d8cf8"
               />
               <Text style={styles.emptyTitle}>
                 {activeTab === "completed"
@@ -277,7 +277,7 @@ useEffect(() => {
 /* ================= STYLES ================= */
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FAFAFA" },
+  container: { flex: 1, backgroundColor: "#f4f8fb" },
 
   bg: {
     position: "absolute",
@@ -322,7 +322,7 @@ const styles = StyleSheet.create({
   activeTab: {
     backgroundColor: "#fff",
     borderWidth: 1,
-    borderColor: "#FF7A45",
+    borderColor: "#1d8cf8",
   },
 
   tabText: {
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
   },
 
   activeTabText: {
-    color: "#FF7A45",
+    color: "#1d8cf8",
   },
 
   card: {
@@ -396,14 +396,14 @@ const styles = StyleSheet.create({
 
   cancelBtn: {
     borderWidth: 1,
-    borderColor: "#FF7A45",
+    borderColor: "#1d8cf8",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 20,
   },
 
   cancelText: {
-    color: "#FF7A45",
+    color: "#1d8cf8",
     fontSize: 10,
   },
 

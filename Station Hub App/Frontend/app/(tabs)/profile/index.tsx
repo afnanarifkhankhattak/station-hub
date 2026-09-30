@@ -35,21 +35,21 @@ export default function ProfileSettingsScreen() {
       id: 1,
       title: "Manage your profile",
       subtitle: "Change profile picture, name, number & mail",
-      icon: <Feather name="user" size={20} color="#FF7A45" />,
+      icon: <Feather name="user" size={20} color="#1d8cf8" />,
       route: "/(tabs)/profile/manageProfile/manageprofile",
     },
     {
       id: 2,
       title: "Change Password",
       subtitle: "Update your account password",
-      icon: <Feather name="lock" size={20} color="#FF7A45" />,
+      icon: <Feather name="lock" size={20} color="#1d8cf8" />,
       route: "/(tabs)/profile/changePassword/changepassword",
     },
     {
       id: 3,
       title: "Booking History",
       subtitle: "View your past and upcoming bookings",
-      icon: <Feather name="clock" size={20} color="#FF7A45" />,
+      icon: <Feather name="clock" size={20} color="#1d8cf8" />,
       route: "/(tabs)/profile/bookingHistory/bookinghistory",
     },
   ];
@@ -59,21 +59,21 @@ export default function ProfileSettingsScreen() {
       id: 1,
       title: "Privacy Policy",
       subtitle: "How we handle your data",
-      icon: <Feather name="shield" size={20} color="#FF7A45" />,
+      icon: <Feather name="shield" size={20} color="#1d8cf8" />,
       route: "/(tabs)/profile/privacyPolicy/privacypolicy",
     },
     {
       id: 2,
       title: "FAQs",
       subtitle: "Frequently asked questions",
-      icon: <Feather name="help-circle" size={20} color="#FF7A45" />,
+      icon: <Feather name="help-circle" size={20} color="#1d8cf8" />,
       route: "/(tabs)/profile/faqs/faqs",
     },
     {
       id: 3,
       title: "About App",
       subtitle: "App version & information",
-      icon: <Feather name="info" size={20} color="#FF7A45" />,
+      icon: <Feather name="info" size={20} color="#1d8cf8" />,
       route: "/(tabs)/profile/aboutApp/aboutapp",
     },
   ];
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
 
   logoutTitle: {
-    color: "#EF4444",
+    color: "#1d8cf8",
     fontWeight: "700",
   },
 

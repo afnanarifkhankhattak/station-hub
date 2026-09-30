@@ -18,7 +18,7 @@ import Slider from "@react-native-community/slider";
 import { API_BASE } from "@/src/config";
 import { apiFetch } from "@/src/api";
 
-type Category = "PETROL" | "HEV";
+type Category = "service" | "HEV";
 type SortKey = "newest" | "rated" | "nearest" | "popular";
 
 const PAGE_SIZE = 20;
@@ -29,7 +29,7 @@ const MAX_RADIUS_KM = 50;
 const DEFAULT_RADIUS_KM = 10;
 
 const CATEGORY_OPTIONS: { key: Category; label: string }[] = [
-  { key: "PETROL", label: "Services Stations" },
+  { key: "service", label: "Services Stations" },
   { key: "HEV", label: "HEV Charging" },
 ];
 
@@ -68,7 +68,7 @@ export default function ExploreStation({
   const router = useRouter();
   const { height: windowHeight } = useWindowDimensions();
 
-  const [category, setCategory] = useState<Category>("PETROL");
+  const [category, setCategory] = useState<Category>("service");
   const [sortBy, setSortBy] = useState<SortKey>("newest");
 
   const [stations, setStations] = useState<any[]>([]);
@@ -133,7 +133,7 @@ export default function ExploreStation({
 
         if (res.ok) {
           let fetched = data.stations || [];
-          if (cat === "PETROL") {
+          if (cat === "service") {
             fetched = fetched.filter(
               (s: any) => (s.station_type || "EV") !== "HEV"
             );
@@ -408,7 +408,7 @@ export default function ExploreStation({
               )}
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={18} color="#ccc" />
+        <Ionicons name="chevron-forward" size={18} color="#0f3c5c" />
       </TouchableOpacity>
     );
   };
@@ -421,7 +421,7 @@ export default function ExploreStation({
           style={{
             width: "70%",
             height: 16,
-            backgroundColor: "#e0e0e0",
+            backgroundColor: "#a43232",
             borderRadius: 4,
             marginBottom: 8,
           }}
@@ -474,7 +474,7 @@ export default function ExploreStation({
         {searching ? (
           <ActivityIndicator
             size="small"
-            color="#FF7A45"
+            color="#0f3c5c"
             style={{ marginVertical: 20 }}
           />
         ) : searchResults.length === 0 ? (
@@ -531,7 +531,7 @@ export default function ExploreStation({
             <MaterialIcons
               name={opt.key === "HEV" ? "ev-station" : "local-gas-station"}
               size={16}
-              color={category === opt.key ? "#fff" : "#FF7A45"}
+              color={category === opt.key ? "#fff" : "#0f3c5c"}
             />
             <Text
               style={[
@@ -572,10 +572,10 @@ export default function ExploreStation({
       {/* NEAREST: location / radius */}
       {sortBy === "nearest" && !userLocation && (
         <View style={styles.locationPrompt}>
-          <Ionicons name="location-outline" size={26} color="#FF7A45" />
+          <Ionicons name="location-outline" size={26} color="#0f3c5c" />
           <Text style={styles.locationPromptText}>
             Turn on your location to find{" "}
-            {category === "HEV" ? "HEV" : "petrol pump"} stations near you
+            {category === "HEV" ? "HEV" : "service pump"} stations near you
           </Text>
           {locationError ? (
             <Text style={styles.locationErrorText}>{locationError}</Text>
@@ -603,7 +603,7 @@ export default function ExploreStation({
             maximumValue={MAX_RADIUS_KM}
             step={1}
             value={radiusKm}
-            minimumTrackTintColor="#FF7A45"
+            minimumTrackTintColor="#0f3c5c"
             maximumTrackTintColor="#FFD9C2"
             thumbTintColor="#FF7A45"
             onValueChange={setRadiusKm}
@@ -641,7 +641,7 @@ export default function ExploreStation({
                 disabled={loadingMore}
               >
                 {loadingMore ? (
-                  <ActivityIndicator size="small" color="#FF7A45" />
+                  <ActivityIndicator size="small" color="#0f3c5c" />
                 ) : (
                   <Text style={styles.showMoreText}>Show more</Text>
                 )}
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
   // Themed pill heading (matches Home)
   headingWrap: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
     borderRadius: 16,
     marginTop: 10,
     marginLeft: 15,
@@ -669,42 +669,45 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FF7A45",
+    color: "#1d8cf8", // Updated to match the blue theme[cite: 1]
   },
 
   categoryTab: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 20,
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
     marginLeft: 15,
+    marginBottom:22,
+    marginTop:10,
   },
-  categoryTabActive: { backgroundColor: "#FF7A45" },
+  categoryTabActive: { backgroundColor: "#1d8cf8" }, // Updated to match the blue theme[cite: 1]
   categoryTabText: {
     fontSize: 13,
     fontWeight: "700",
-    color: "#FF7A45",
+    color: "#1d8cf8", // Updated to match the blue theme[cite: 1]
     marginLeft: 6,
   },
   categoryTabTextActive: { color: "#fff" },
 
   sortBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 12,
     borderRadius: 20,
-    backgroundColor: "#FFF1E8",
+    marginBottom:10,
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
     marginLeft: 15,
   },
-  sortBtnActive: { backgroundColor: "#FF7A45" },
-  sortBtnText: { fontSize: 13, fontWeight: "600", color: "#FF7A45" },
+  sortBtnActive: { backgroundColor: "#1d8cf8" }, // Updated to match the blue theme[cite: 1]
+  sortBtnText: { fontSize: 13, fontWeight: "600", color: "#1d8cf8" }, // Updated to match the blue theme[cite: 1]
   sortBtnTextActive: { color: "#fff" },
 
   serviceCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#e2edf5",
     marginHorizontal: 15,
     marginBottom: 12,
     padding: 12,
@@ -716,6 +719,7 @@ const styles = StyleSheet.create({
     height: 70,
     borderRadius: 15,
     marginRight: 12,
+    color:"#0f3c5c",
   },
   serviceTitle: { fontSize: 15, fontWeight: "bold" },
   serviceLocation: { fontSize: 12, color: "#888", marginTop: 4 },
@@ -726,13 +730,13 @@ const styles = StyleSheet.create({
     color: "#444",
     marginRight: 4,
   },
-  ratingStar: { fontSize: 13, color: "#FFB400" },
+  ratingStar: { fontSize: 13, color: "#1d8cf8" ,borderColor:"#0f3c5c"},
   ratingCountText: { fontSize: 11, color: "#999" },
-  distanceText: { fontSize: 12, color: "#FF7A45", fontWeight: "600" },
+  distanceText: { fontSize: 12, color: "#1d8cf8", fontWeight: "600" }, // Updated to match the blue theme[cite: 1]
 
   hevBadge: {
     alignSelf: "flex-start",
-    backgroundColor: "#16A34A",
+    backgroundColor: "#0f3c5c",
     borderRadius: 6,
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -747,9 +751,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 22,
     paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
   },
-  showMoreText: { color: "#FF7A45", fontWeight: "700", fontSize: 13 },
+  showMoreText: { color: "#1d8cf8", fontWeight: "700", fontSize: 13 }, // Updated to match the blue theme[cite: 1]
 
   emptyMsg: {
     textAlign: "center",
@@ -760,7 +764,7 @@ const styles = StyleSheet.create({
 
   locationPrompt: {
     alignItems: "center",
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
     marginHorizontal: 15,
     borderRadius: 16,
     padding: 20,
@@ -775,7 +779,7 @@ const styles = StyleSheet.create({
   },
   locationErrorText: { color: "#D14343", fontSize: 12, marginBottom: 10 },
   locationBtn: {
-    backgroundColor: "#FF7A45",
+    backgroundColor: "#1d8cf8", // Updated to match the blue theme[cite: 1]
     borderRadius: 20,
     paddingHorizontal: 22,
     paddingVertical: 10,

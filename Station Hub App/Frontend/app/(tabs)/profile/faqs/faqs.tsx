@@ -123,7 +123,7 @@ export default function FaqsScreen() {
                   <Ionicons
                     name={isOpen ? "chevron-up" : "chevron-down"}
                     size={20}
-                    color="#FF7A45"
+                    color="#1d8cf8"
                   />
                 </TouchableOpacity>
 
@@ -148,7 +148,7 @@ export default function FaqsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f4f8fb",
   },
 
   gradient: {

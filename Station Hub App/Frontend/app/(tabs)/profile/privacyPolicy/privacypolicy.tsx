@@ -70,7 +70,7 @@ export default function PrivacyPolicyScreen() {
   if (userLoading) {
     return (
       <SafeAreaView style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator color="#FF7A45" size="large" />
+        <ActivityIndicator color="#1d8cf8" size="large" />
       </SafeAreaView>
     );
   }
@@ -190,7 +190,7 @@ export default function PrivacyPolicyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f4f8fb",
   },
 
   gradient: {
@@ -262,14 +262,14 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: "#FF7A45",
+    borderColor: "#1d8cf8",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
   },
 
   checkboxChecked: {
-    backgroundColor: "#FF7A45",
+    backgroundColor: "#1d8cf8",
   },
 
   checkboxLabel: {
@@ -279,7 +279,7 @@ const styles = StyleSheet.create({
   },
 
   agreeBtn: {
-    backgroundColor: "#FF7A45",
+    backgroundColor: "#1d8cf8",
     paddingVertical: 14,
     borderRadius: 24,
     alignItems: "center",

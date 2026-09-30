@@ -762,7 +762,7 @@ export default function ExploreScreen() {
         </View>
         <View style={styles.rowRight}>
           <View style={styles.ratingRow}>
-            <Ionicons name="star" size={13} color="#F5A623" />
+            <Ionicons name="star" size={13} color="#1d8cf8" />
             <Text style={styles.ratingText}>
               {(item.avg_rating ?? 0).toFixed(1)}
             </Text>
@@ -838,7 +838,7 @@ export default function ExploreScreen() {
               <MaterialIcons
                 name={opt.icon}
                 size={16}
-                color={active ? "#fff" : BRAND_DARK}
+                color={active ? "#fff" : "#0f3c5c"}
               />
               <Text style={[styles.catText, active && styles.catTextActive]}>
                 {opt.label}
@@ -1233,7 +1233,7 @@ function Chip({
         <Ionicons
           name={icon}
           size={14}
-          color={active ? "#fff" : "#333"}
+          color={active ? "#fff" : "#0f3c5c"}
           style={{ marginRight: 4 }}
         />
       ) : null}
@@ -1244,17 +1244,17 @@ function Chip({
   );
 }
 
-const BRAND = "#FF7A00";
-const BRAND_DARK = "#FF7A45";
-const POPULAR = "#D97706";
+const BRAND = "#1d8cf8";
+const BRAND_DARK = "#1d8cf8";
+const POPULAR = "#1d8cf8";
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: "#fffdfb",
+    backgroundColor: "#ffffff",
   },
   stationSectionTitle: {
-    backgroundColor: "#fffdfb",
+    backgroundColor: "#ffffff",
     color: "#222",
     fontSize: 17,
     fontWeight: "700",
@@ -1324,7 +1324,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     marginHorizontal: 12,
     marginTop: 10,
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5",
     borderRadius: 14,
     padding: 3,
   },
@@ -1379,7 +1379,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     marginTop: 8,
     marginBottom: 8,
-    backgroundColor: "#E8E8E8",
+    backgroundColor: "#e2edf5",
     borderRadius: 10,
     padding: 3,
   },
@@ -1813,7 +1813,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: "#e74c3c",
+    backgroundColor: "#1d8cf8",
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,

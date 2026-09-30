@@ -48,7 +48,7 @@ export default function HevAbout({ station, distanceKm }: Props) {
           this component starts straight at the type badge / distance line. */}
       <View style={styles.headerMetaRow}>
         <View style={styles.badge}>
-          <Ionicons name="flash" size={13} color="#16A34A" />
+          <Ionicons name="flash" size={13} color="#0f3c5c" />
           <Text style={styles.badgeText}>HEV Charging</Text>
         </View>
         <Text style={styles.mutedInline}>

@@ -122,7 +122,7 @@ export default function ChangePasswordScreen() {
                 styles.input,
                 {
                   borderBottomColor:
-                    focusedInput === "current" ? "#FF7A45" : "#E5E7EB",
+                    focusedInput === "current" ? "#1d8cf8" : "#E5E7EB",
                 },
               ]}
               onFocus={() => setFocusedInput("current")}
@@ -146,7 +146,7 @@ export default function ChangePasswordScreen() {
                 styles.input,
                 {
                   borderBottomColor:
-                    focusedInput === "new" ? "#FF7A45" : "#E5E7EB",
+                    focusedInput === "new" ? "#1d8cf8" : "#E5E7EB",
                 },
               ]}
               onFocus={() => setFocusedInput("new")}
@@ -170,7 +170,7 @@ export default function ChangePasswordScreen() {
                 styles.input,
                 {
                   borderBottomColor:
-                    focusedInput === "confirm" ? "#FF7A45" : "#E5E7EB",
+                    focusedInput === "confirm" ? "#1d8cf8" : "#E5E7EB",
                 },
               ]}
               onFocus={() => setFocusedInput("confirm")}
@@ -209,7 +209,7 @@ export default function ChangePasswordScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FAFAFA",
+    backgroundColor: "#f4f8fb",
   },
 
   gradient: {
@@ -254,7 +254,7 @@ const styles = StyleSheet.create({
   },
 
   label: {
-    color: "#FF7A45",
+    color: "#1d8cf8",
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8,
@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
 
   saveBtn: {
     flex: 1,
-    backgroundColor: "#FF7A45",
+    backgroundColor: "#1d8cf8",
     paddingVertical: 14,
     borderRadius: 24,
     alignItems: "center",
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   discardBtn: {
     flex: 1,
     borderWidth: 1.5,
-    borderColor: "#FF7A45",
+    borderColor: "#1d8cf8",
     paddingVertical: 14,
     borderRadius: 24,
     alignItems: "center",
@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   },
 
   discardText: {
-    color: "#FF7A45",
+    color: "#1d8cf8",
     fontWeight: "600",
     fontSize: 15,
   },

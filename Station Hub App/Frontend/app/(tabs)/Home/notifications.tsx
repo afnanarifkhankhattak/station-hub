@@ -160,7 +160,7 @@ export default function NotificationsScreen() {
         {/* LOADING */}
         {loading && (
           <View style={{ paddingVertical: 40, alignItems: "center" }}>
-            <ActivityIndicator color="#FF8C42" size="large" />
+            <ActivityIndicator color="#0f3c5c" size="large" />
           </View>
         )}
 
@@ -170,7 +170,7 @@ export default function NotificationsScreen() {
         {/* EMPTY */}
         {!loading && !error && visible.length === 0 && (
           <View style={styles.empty}>
-            <Ionicons name="notifications-outline" size={48} color="#FF8C42" />
+            <Ionicons name="notifications-outline" size={48} color="#0f3c5c" />
             <Text style={styles.emptyTitle}>
               {activeTab === "unread"
                 ? "No unread notifications"
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   },
 
   activeTab: {
-    backgroundColor: "#FF8C42",
+    backgroundColor: "#1d8cf8",
   },
 
   tabText: {

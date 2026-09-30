@@ -116,7 +116,7 @@ export default function HomeScreen() {
               <Text style={styles.name}>{user?.full_name}</Text>
 
               <View style={styles.location}>
-                <Ionicons name="location-sharp" size={15} color="#FF7A45" />
+                <Ionicons name="location-sharp" size={15} color="#0f3c5c" />
                 <Text style={styles.locationText}>{userCity}</Text>
               </View>
             </View>
@@ -127,7 +127,7 @@ export default function HomeScreen() {
               onPress={() => router.push("/(tabs)/Home/notifications")}
               style={{ marginLeft: 15 }}
             >
-              <Ionicons name="notifications-outline" size={24} color="#333" />
+              <Ionicons name="notifications-outline" size={24} color="#0f3c5c" />
               {unreadCount > 0 && (
                 <View style={styles.notifBadge}>
                   <Text style={styles.notifBadgeText}>
@@ -183,7 +183,7 @@ export default function HomeScreen() {
               activeOpacity={0.8}
               onPress={() => openBookings(item.key)}
             >
-              <Ionicons name={item.icon} size={20} color="#FF7A45" />
+              <Ionicons name={item.icon} size={20} color="#0f3c5c" />
               <Text style={styles.bookingBtnText}>{item.label}</Text>
             </TouchableOpacity>
           ))}
@@ -196,22 +196,22 @@ export default function HomeScreen() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <View style={styles.categoryCard}>
-            <MaterialIcons name="local-car-wash" size={28} color="#FF7A45" />
+            <MaterialIcons name="local-car-wash" size={28} color="#0f3c5c" />
             <Text style={styles.categoryText}>Express Wash</Text>
           </View>
 
           <View style={styles.categoryCard}>
-            <FontAwesome5 name="car-side" size={24} color="#FF7A45" />
+            <FontAwesome5 name="car-side" size={24} color="#0f3c5c" />
             <Text style={styles.categoryText}>Premium</Text>
           </View>
 
           <View style={styles.categoryCard}>
-            <Ionicons name="sparkles-outline" size={28} color="#FF7A45" />
+            <Ionicons name="sparkles-outline" size={28} color="#0f3c5c" />
             <Text style={styles.categoryText}>Interior</Text>
           </View>
 
           <View style={styles.categoryCard}>
-            <MaterialIcons name="build-circle" size={28} color="#FF7A45" />
+            <MaterialIcons name="build-circle" size={28} color="#0f3c5c" />
             <Text style={styles.categoryText}>Engine</Text>
           </View>
         </ScrollView>
@@ -232,7 +232,7 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fffdfb",
+    backgroundColor: "#ffffff", // Updated to match the light blue/clean theme background
   },
 
   header: {
@@ -259,6 +259,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 18,
     fontWeight: "bold",
+    color: "#0f3c5c", // Adjusted for better contrast with the blue theme
   },
 
   location: {
@@ -281,7 +282,7 @@ const styles = StyleSheet.create({
   searchBarWrap: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to a soft blue tint matching the theme
     borderRadius: 14,
     marginHorizontal: 18,
     paddingHorizontal: 14,
@@ -292,7 +293,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 8,
     fontSize: 14,
-    color: "#333",
+    color: "#0f3c5c",
   },
 
   banner: {
@@ -303,10 +304,10 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  // Theme pill headings (My Bookings / Service Categories)
+  // Theme pill headings (My Bookings / Service Categories) updated to match the blue theme[cite: 1]
   headingWrap: {
     alignSelf: "flex-start",
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to a matching soft blue background tint[cite: 1]
     borderRadius: 16,
     marginTop: 25,
     marginLeft: 15,
@@ -318,7 +319,7 @@ const styles = StyleSheet.create({
   heading: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#FF7A45",
+    color: "#1d8cf8", // Updated to a vibrant blue color matching the image background theme[cite: 1]
   },
 
   bookingRow: {
@@ -327,42 +328,45 @@ const styles = StyleSheet.create({
     gap: 10,
   },
 
-  bookingBtn: {
+bookingBtn: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#FFF1E8",
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
     borderRadius: 16,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    maxWidth: 100,
   },
-
   bookingBtnText: {
     marginTop: 6,
     fontSize: 12,
     fontWeight: "700",
-    color: "#FF7A45",
+    color: "#1d8cf8", // Updated to match the blue theme[cite: 1]
   },
 
   categoryCard: {
-    width: 90,
-    height: 70,
-    backgroundColor: "#FFF1E8",
+    width: 83,
+    height: 60,
+    backgroundColor: "#e2edf5", // Updated to match the blue theme[cite: 1]
     marginLeft: 15,
-    borderRadius: 20,
+    borderRadius: 16, // Matched border radius for design consistency
     justifyContent: "center",
     alignItems: "center",
+    marginBottom:16,
   },
-
   categoryText: {
     marginTop: 8,
     fontSize: 12,
+    color: "#1d8cf8",
+   
   },
 
   notifBadge: {
     position: "absolute",
     top: -4,
     right: -4,
-    backgroundColor: "#FF3B30",
+    backgroundColor: "#392322",
     borderRadius: 8,
     minWidth: 16,
     height: 16,

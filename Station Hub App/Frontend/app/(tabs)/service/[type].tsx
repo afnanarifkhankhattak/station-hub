@@ -246,7 +246,7 @@ export default function ServicesScreen() {
         {/* LOADING */}
         {loading && (
           <View style={{ paddingVertical: 40, alignItems: "center" }}>
-            <ActivityIndicator color="#FF8C42" size="large" />
+            <ActivityIndicator color= "#1d8cf8" size="large" />
           </View>
         )}
 
@@ -312,7 +312,7 @@ export default function ServicesScreen() {
                   <View style={styles.infoRow}>
                     {service.rating ? (
                       <View style={styles.infoItem}>
-                        <Ionicons name="star" size={14} color="#FF8C42" />
+                        <Ionicons name="star" size={14} color= "#1d8cf8" />
                         <Text style={styles.infoText}>
                           {Number(service.rating).toFixed(1)}
                         </Text>
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   },
 
   activeTab: {
-    backgroundColor: "#FF8C42",
+    backgroundColor:  "#1d8cf8",
   },
 
   tabText: {
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
 
   highlightedCard: {
     borderWidth: 2,
-    borderColor: "#FF8C42",
+    borderColor:  "#1d8cf8",
   },
 
   image: {
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
   price: {
     fontSize: 18,
     fontWeight: "800",
-    color: "#FF8C42",
+    color:  "#1d8cf8",
     marginBottom: 10,
   },
 
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
 
   scheduleBtn: {
-    backgroundColor: "#FF8C42",
+    backgroundColor:  "#1d8cf8",
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 10,
@@ -497,14 +497,14 @@ const styles = StyleSheet.create({
 
   viewBtn: {
     borderWidth: 1,
-    borderColor: "#FF8C42",
+    borderColor:  "#1d8cf8",
     paddingVertical: 7,
     paddingHorizontal: 12,
     borderRadius: 10,
   },
 
   viewText: {
-    color: "#FF8C42",
+    color:  "#1d8cf8",
     fontSize: 12,
     fontWeight: "600",
   },
