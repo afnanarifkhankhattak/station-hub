@@ -16,4 +16,10 @@ def update_booking_status(
     body: dict,
     current_user: dict = Depends(get_current_user)
 ):
-    return dashboard_service.update_booking_status(booking_id, body.get("status"))
+    # Pass user_id AND role so the service can authorize properly
+    return dashboard_service.update_booking_status(
+        booking_id,
+        body.get("status"),
+        current_user["sub"],
+        current_user.get("role", "user"),
+    )

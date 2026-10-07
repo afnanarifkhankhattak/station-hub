@@ -1,0 +1,28 @@
+{
+  "planHash": "99795581d36920db7a3c5a0356ebf964e2523d05c9b10756a656acdbdaf812ab",
+  "phase": "baseline",
+  "recordedAtUtc": "2026-10-01T02:26:59.5053284Z",
+  "retryCount": 0,
+  "resetBaseline": true,
+  "complete": true,
+  "result": {
+    "setupSucceeded": false,
+    "setupDurationMs": 60829,
+    "setupFailureOutput": "setup step 0 \u0027npm\u0027 failed (exit=, timedOut=True)\r\n",
+    "assertions": [],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Program Files\\nodejs\\npm.CMD",
+        "args": [
+          "ci",
+          "--legacy-peer-deps"
+        ],
+        "cwd": "e:\\station-hub\\Station Hub App\\Frontend",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

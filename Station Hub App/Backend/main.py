@@ -13,6 +13,8 @@ from routes import settings
 from routes import dashboard
 from routes import services
 from routes import booking_events
+from routes import admin                    # ← NEW
+from routes import reviews                  # ← NEW
 from services.booking_events import booking_events as booking_event_manager
 
 app = FastAPI()
@@ -22,17 +24,19 @@ app = FastAPI()
 async def configure_booking_events():
     booking_event_manager.set_event_loop(asyncio.get_running_loop())
 
+
 app.add_middleware(GZipMiddleware, minimum_size=500)
 
-# Comma-separated list, e.g.:
-# CORS_ORIGINS=http://localhost:5173,https://your-dashboard.onrender.com
+# ─── CORS Configuration ─────────────────────────────────────
+# Allow the frontend dev server and any additional origins.
+_cors_env = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 _cors_origins = [
     origin.strip()
-    for origin in os.getenv(
-        "CORS_ORIGINS",
-    ).split(",")
+    for origin in _cors_env.split(",")
     if origin.strip()
 ]
+
+print(f"[CORS] Allowed origins: {_cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,8 +52,10 @@ app.include_router(stations.router)
 app.include_router(bookings.router)
 app.include_router(settings.router)
 app.include_router(dashboard.router)
-app.include_router(services.router) 
+app.include_router(services.router)
 app.include_router(booking_events.router)
+app.include_router(admin.router)            # ← NEW
+app.include_router(reviews.router)          # ← NEW
 
 
 @app.get("/")

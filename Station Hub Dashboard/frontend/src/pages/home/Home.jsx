@@ -18,36 +18,22 @@ import {
   IconMore,
 } from "../../../public/utils/icons";
 
-
-//////////////////////////////////////////////////////////////////////////////////
-import { collection, addDoc } from "firebase/firestore";
-import { db } from "../../firebase";
-
-// paste inside your component
-const addTestBooking = async () => {
-  try {
-    await addDoc(collection(db, "bookings"), {
-      car: "Economy Bus — MUL-LHR-02",
-      created_at: "2026-06-12T14:20:00.000000",
-      from_location: "Peshawar",
-      price: 800,
-      seat_count: 1,
-      service_id: "service_002",
-      station_id: "station_003",
-      status: "pending",
-      to_location: "Islamabad",
-      travel_date: "2026-09-15",
-      travel_time: "05:00 PM",
-      user_id: "user_004",
-      user_name: "Fatima Malik",
-      dashboardRead: false,
-    });
-    alert("Booking added!");
-  } catch (e) {
-    console.error(e);
-    alert("Failed: " + e.message);
-  }
-};
+// ─── Inline icon for Reviews (until icons.jsx is moved to /src) ──
+const IconReviews = () => (
+  <svg
+    className="h-5 w-5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth={1.8}
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M11.48 3.5a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.563.563 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"
+    />
+  </svg>
+);
 
 
 const navItems = [
@@ -59,19 +45,19 @@ const navItems = [
 ];
 
 
-
 const adminNavItems = [
-  { name: "Overview", path: "admin-dashboard ", icon: <IconDashboard /> },
+  { name: "Overview", path: "admin-dashboard", icon: <IconDashboard /> },
   { name: "Stations", path: "admin-stations", icon: <IconStation /> },
+  { name: "Reviews", path: "admin-reviews", icon: <IconReviews /> },  // ← NEW
   { name: "Customers", path: "admin-customers", icon: <IconServices /> },
   { name: "Bookings", path: "admin-bookings", icon: <IconProfile /> },
   { name: "Reports", path: "admin-reports", icon: <IconSettings /> },
 ];
 
+
 export default function HomeLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  // const dark = useDarkMode();
   const { unreadCount } = useNotifications();
   const { user } = useAuth();
 
@@ -80,7 +66,8 @@ export default function HomeLayout() {
   const [modalPosition, setModalPosition] = useState({ top: 0, left: 0 });
 
   // 1. Declare state FIRST
-  const [stored, setStored] = useState(user || JSON.parse(localStorage.getItem("user") || "{}")
+  const [stored, setStored] = useState(
+    user || JSON.parse(localStorage.getItem("user") || "{}")
   );
 
   // 2. Then derive from it
@@ -138,13 +125,17 @@ export default function HomeLayout() {
         className={`h-16 w-screen border-b flex items-center justify-between pr-6 z-10 transition-colors duration-300 ${navbar}`}
       >
         <div
-          className={`flex items-center w-52 px-2 py-0 justify-between gap-4 ${dark ? "border-[#2a2d3e]" : "border-gray-100"}`}
+          className={`flex items-center w-52 px-2 py-0 justify-between gap-4 ${
+            dark ? "border-[#2a2d3e]" : "border-gray-100"
+          }`}
         >
           {/* Hamburger */}
           <div className="w-10 h-10 flex items-center justify-center">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${iconCol} hover:text-orange-500 ${dark ? "hover:bg-[#2a2d3e]" : "hover:bg-orange-50"}`}
+              className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors cursor-pointer ${iconCol} hover:text-orange-500 ${
+                dark ? "hover:bg-[#2a2d3e]" : "hover:bg-orange-50"
+              }`}
             >
               <IconMenu />
             </button>
@@ -168,13 +159,6 @@ export default function HomeLayout() {
 
         {/* Right: notifications + avatar */}
         <div className="flex items-center gap-3">
-          {/* <button
-            onClick={addTestBooking}
-            type="button"
-            className=" bg-orange-500 hover:bg-orange-600 active:scale-95 text-white text-sm font-semibold px-5 py-2.5 rounded-xl shadow-lg transition-all cursor-pointer"
-          >
-            + Add Test Booking
-          </button> */}
           <div
             onClick={() => {
               user.role === "admin"
@@ -194,53 +178,30 @@ export default function HomeLayout() {
               </span>
             )}
           </div>
-          {/* <div className="w-9 h-9 rounded-full bg-orange-500 text-white flex items-center justify-center text-sm font-semibold cursor-pointer">
-            SJ
-          </div> */}
         </div>
       </header>
 
       <div className="flex h-[calc(100vh-64px)]">
         {/* ── SIDEBAR ── */}
         <aside
-          className={`flex-shrink-0 h-full border-r flex flex-col transition-all duration-300 overflow-hidden ${sidebar} ${sidebarOpen ? "w-52" : "w-14"}`}
+          className={`flex-shrink-0 h-full border-r flex flex-col transition-all duration-300 overflow-hidden ${sidebar} ${
+            sidebarOpen ? "w-52" : "w-14"
+          }`}
         >
           <nav className="flex-1 px-2 py-4 space-y-1">
-
-            {user.role === "admin" ? (
-              adminNavItems.map((item) => {
-
-                const adminPath ="/admin/" + item.path.trim();
-                const active = location.pathname === adminPath;
-                return (
-                  <button
-                    key={item.name}
-                    onClick={() => navigate(item.path)}
-                    className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors cursor-pointer ${active
-                      ? "bg-orange-500/20 border border-orange-500 text-orange-500 font-medium"
-                      : `${dark ? "text-gray-300" : "text-gray-600"} ${hoverNav}`
-                      } ${!sidebarOpen ? "justify-center" : ""}`}
-                    title={!sidebarOpen ? item.name : ""}
-                  >
-                    <span className={active ? "text-orange-500" : iconCol}>
-                      {item.icon}
-                    </span>
-                    {sidebarOpen && <span>{item.name}</span>}
-                  </button>
-                );
-              }))
-              : (
-                navItems.map((item) => {
-                  const active = location.pathname === item.path;
+            {user.role === "admin"
+              ? adminNavItems.map((item) => {
+                  const adminPath = "/admin/" + item.path.trim();
+                  const active = location.pathname === adminPath;
                   return (
                     <button
                       key={item.name}
-                      onClick={() => navigate(item.path)}
-                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors cursor-pointer ${active
-
-                        ? "bg-orange-500/20 border border-orange-500 text-orange-500 font-medium"
-                        : `${dark ? "text-gray-300" : "text-gray-600"} ${hoverNav}`
-                        } ${!sidebarOpen ? "justify-center" : ""}`}
+                      onClick={() => navigate(adminPath)}
+                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                        active
+                          ? "bg-orange-500/20 border border-orange-500 text-orange-500 font-medium"
+                          : `${dark ? "text-gray-300" : "text-gray-600"} ${hoverNav}`
+                      } ${!sidebarOpen ? "justify-center" : ""}`}
                       title={!sidebarOpen ? item.name : ""}
                     >
                       <span className={active ? "text-orange-500" : iconCol}>
@@ -250,16 +211,38 @@ export default function HomeLayout() {
                     </button>
                   );
                 })
-              )}
-
+              : navItems.map((item) => {
+                  const active = location.pathname === item.path;
+                  return (
+                    <button
+                      key={item.name}
+                      onClick={() => navigate(item.path)}
+                      className={`w-full flex items-center gap-2 px-2 py-2 rounded-lg text-sm transition-colors cursor-pointer ${
+                        active
+                          ? "bg-orange-500/20 border border-orange-500 text-orange-500 font-medium"
+                          : `${dark ? "text-gray-300" : "text-gray-600"} ${hoverNav}`
+                      } ${!sidebarOpen ? "justify-center" : ""}`}
+                      title={!sidebarOpen ? item.name : ""}
+                    >
+                      <span className={active ? "text-orange-500" : iconCol}>
+                        {item.icon}
+                      </span>
+                      {sidebarOpen && <span>{item.name}</span>}
+                    </button>
+                  );
+                })}
           </nav>
 
           {/* Bottom user card */}
           <div
-            className={`border-t px-2 py-4 ${dark ? "border-[#2a2d3e]" : "border-gray-100"}`}
+            className={`border-t px-2 py-4 ${
+              dark ? "border-[#2a2d3e]" : "border-gray-100"
+            }`}
           >
             <div
-              className={`flex items-center gap-2 px-2 py-2 rounded-lg border ${userCard} ${!sidebarOpen ? "justify-center" : ""}`}
+              className={`flex items-center gap-2 px-2 py-2 rounded-lg border ${userCard} ${
+                !sidebarOpen ? "justify-center" : ""
+              }`}
             >
               <div className="w-7 h-7 rounded-full overflow-hidden flex-shrink-0">
                 {sidebarAvatar ? (
@@ -284,7 +267,11 @@ export default function HomeLayout() {
                     <p className={`text-xs truncate ${sub}`}>{sidebarEmail}</p>
                   </div>
                   <button
-                    className={`transition-colors flex-shrink-0 ${dark ? "text-gray-500 hover:text-gray-300" : "text-gray-400 hover:text-gray-600"}`}
+                    className={`transition-colors flex-shrink-0 ${
+                      dark
+                        ? "text-gray-500 hover:text-gray-300"
+                        : "text-gray-400 hover:text-gray-600"
+                    }`}
                     onClick={(e) => {
                       const rect = e.currentTarget.getBoundingClientRect();
                       setModalPosition({

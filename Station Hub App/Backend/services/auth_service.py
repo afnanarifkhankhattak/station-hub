@@ -19,24 +19,42 @@ from utils.email_handler import generate_otp, send_otp_email
 from services.service_service import seed_default_services_for_owner
 
 
+# ─── Helper ─────────────────────────────────────────────────
+def _normalize_role(value) -> str:
+    """
+    Safely normalize a role value:
+    - Handles None
+    - Strips whitespace (including trailing \\n from Firestore edits)
+    - Falls back to "user" if empty
+    """
+    if not value or not isinstance(value, str):
+        return "user"
+    cleaned = value.strip()
+    return cleaned or "user"
+
+
 # ─── Register ───────────────────────────────────────────────
 def register_user(body: RegisterRequest) -> dict:
-    
-      #  CRITICAL PROTECTION: Reject the admin role explicitly
-    if body.role.strip().lower() == "admin":
+    # Reject admin role on public registration
+    if body.role and body.role.strip().lower() == "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Registration for the 'admin' role is prohibited through this endpoint."
+            detail="Registration for the 'admin' role is prohibited through this endpoint.",
         )
-        
+
     existing = db.collection("users").where("email", "==", body.email).limit(1).get()
     if existing:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered",
+        )
+
+    normalized_role = _normalize_role(body.role)
 
     user = UserModel(
         full_name=body.full_name,
         email=body.email,
-        role=body.role or "user",  # Default to "user" if no role is provided
+        role=normalized_role,
         password=hash_password(body.password),
         phone=body.phone or "",
     )
@@ -44,15 +62,19 @@ def register_user(body: RegisterRequest) -> dict:
     doc_ref = db.collection("users").add(user.to_dict())
     user_id = doc_ref[1].id
 
-    # Conditional seeding - Only seed default services for certain user roles (non-blocking on failure).
+    # Seed default services for station owners (non-blocking)
     if user.role == "station_owner":
         try:
             seed_default_services_for_owner(user_id)
         except Exception as e:
             print(f"Failed to seed default services for user {user_id}: {e}")
 
-    # Generate tokens embedding the dynamic non-admin role
-    token_payload = {"sub": user_id, "email": body.email, "role": user.role}
+    # Generate tokens with normalized role
+    token_payload = {
+        "sub": user_id,
+        "email": body.email,
+        "role": normalized_role,
+    }
     token = create_access_token(token_payload)
     refresh_token = create_refresh_token({"sub": user_id, "email": body.email})
 
@@ -64,7 +86,7 @@ def register_user(body: RegisterRequest) -> dict:
             "id": user_id,
             "full_name": body.full_name,
             "email": body.email,
-            "role": user.role,
+            "role": normalized_role,
             "phone": body.phone or "",
             "profile_image": "",
         },
@@ -75,17 +97,31 @@ def register_user(body: RegisterRequest) -> dict:
 def login_user(body: LoginRequest) -> dict:
     docs = db.collection("users").where("email", "==", body.email).limit(1).get()
     if not docs:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
 
     user_doc = docs[0]
     user = user_doc.to_dict()
 
-    if not verify_password(body.password, user["password"]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password")
-    
+    if not verify_password(body.password, user.get("password", "")):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
+        )
 
-    token = create_access_token({"sub": user_doc.id, "email": user["email"], "role": user.get("role", "user")})
-    refresh_token = create_refresh_token({"sub": user_doc.id, "email": user["email"]})
+    user_role = _normalize_role(user.get("role"))
+
+    token = create_access_token({
+        "sub": user_doc.id,
+        "email": user["email"],
+        "role": user_role,
+    })
+    refresh_token = create_refresh_token({
+        "sub": user_doc.id,
+        "email": user["email"],
+    })
 
     return {
         "message": "Login successful",
@@ -93,9 +129,9 @@ def login_user(body: LoginRequest) -> dict:
         "refresh_token": refresh_token,
         "user": {
             "id": user_doc.id,
-            "full_name": user["full_name"],
+            "full_name": user.get("full_name", ""),
             "email": user["email"],
-            "role": user["role"] or "user", 
+            "role": user_role,
             "phone": user.get("phone", ""),
             "profile_image": user.get("profile_image", ""),
         },
@@ -119,7 +155,10 @@ def forgot_password(body: ForgotPasswordRequest) -> dict:
 
     sent = send_otp_email(body.email, otp)
     if not sent:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to send OTP email")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send OTP email",
+        )
 
     return {"message": "OTP sent to your email"}
 
@@ -147,15 +186,21 @@ def verify_otp(body: VerifyOTPRequest) -> dict:
 def reset_password(body: ResetPasswordRequest) -> dict:
     otp_doc = db.collection("otps").document(body.email).get()
     if not otp_doc.exists:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="OTP not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="OTP not found")
 
     otp_data = otp_doc.to_dict()
 
     if not otp_data.get("verified"):
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="OTP not verified")
+        raise HTTPException(
+            status_code=status.HTTP_406_NOT_ACCEPTABLE,
+            detail="OTP not verified",
+        )
 
     if otp_data["otp"] != body.otp:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid OTP",
+        )
 
     docs = db.collection("users").where("email", "==", body.email).limit(1).get()
     if not docs:
@@ -175,8 +220,11 @@ def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
 
     user = user_doc.to_dict()
 
-    if not verify_password(body.old_password, user["password"]):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Old password is incorrect")
+    if not verify_password(body.old_password, user.get("password", "")):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Old password is incorrect",
+        )
 
     db.collection("users").document(user_id).update({
         "password": hash_password(body.new_password)
@@ -184,29 +232,22 @@ def change_password(body: ChangePasswordRequest, user_id: str) -> dict:
 
     return {"message": "Password changed successfully"}
 
-# ─── google Auth ────────────────────────────────────────
 
-# Must match OAuth client IDs from google-services.json / Google Cloud Console.
-# Audience of the Google ID token will be one of these.
+# ─── Google Auth ────────────────────────────────────────────
 GOOGLE_OAUTH_CLIENT_IDS = [
-    "994736565413-ovpisjfct483lp4ltlm2a8moltqdh3uf.apps.googleusercontent.com",  # Web (type 3)
-    "994736565413-aft3m0ggnds9bajhed8e7hor1h45bnhs.apps.googleusercontent.com",  # Android (type 1)
+    "994736565413-ovpisjfct483lp4ltlm2a8moltqdh3uf.apps.googleusercontent.com",  # Web
+    "994736565413-aft3m0ggnds9bajhed8e7hor1h45bnhs.apps.googleusercontent.com",  # Android
 ]
 
 
 def _decode_google_or_firebase_token(token: str) -> dict:
-    """
-    Accept either:
-    1) A Firebase ID token (if the client used Firebase Auth), or
-    2) A Google OAuth ID token from expo-auth-session.
-    """
-    # 1) Try Firebase ID token first
+    # Try Firebase ID token first
     try:
         return firebase_auth.verify_id_token(token, clock_skew_seconds=10)
     except Exception as firebase_err:
         print("Not a Firebase ID token:", str(firebase_err))
 
-    # 2) Try Google OAuth ID token (common with Expo Google login)
+    # Try Google OAuth ID token
     try:
         from google.oauth2 import id_token as google_id_token
         from google.auth.transport import requests as google_requests
@@ -252,6 +293,7 @@ def google_login(id_token: str) -> dict:
             "full_name": full_name,
             "email": email,
             "password": "",
+            "role": "user",
             "phone": "",
             "profile_image": profile_image,
             "created_at": datetime.utcnow().isoformat(),
@@ -259,7 +301,13 @@ def google_login(id_token: str) -> dict:
         doc_ref = db.collection("users").add(user)
         user_id = doc_ref[1].id
 
-    token = create_access_token({"sub": user_id, "email": email})
+    user_role = _normalize_role(user.get("role"))
+
+    token = create_access_token({
+        "sub": user_id,
+        "email": email,
+        "role": user_role,
+    })
     refresh_token = create_refresh_token({"sub": user_id, "email": email})
 
     return {
@@ -270,6 +318,7 @@ def google_login(id_token: str) -> dict:
             "id": user_id,
             "full_name": full_name,
             "email": email,
+            "role": user_role,
             "phone": user.get("phone", ""),
             "profile_image": profile_image,
         },
@@ -307,7 +356,6 @@ def update_current_user_profile(body: UpdateProfileRequest, user_id: str) -> dic
 
     db.collection("users").document(user_id).update(update_data)
 
-    # re-fetch so the response reflects the actual saved document
     updated_doc = db.collection("users").document(user_id).get()
     user = updated_doc.to_dict()
     user.pop("password", None)
@@ -320,25 +368,42 @@ def update_current_user_profile(body: UpdateProfileRequest, user_id: str) -> dic
         },
     }
 
+
 # ─── Refresh Token ──────────────────────────────────────────
 def refresh_access_token(refresh_token: str) -> dict:
     payload = verify_token(refresh_token, token_type="refresh")
     if not payload or payload.get("type") != "refresh":
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired refresh token")
-    
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
     user_id = payload.get("sub")
     email = payload.get("email")
     if not user_id or not email:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
-    
-    docs = db.collection("users").document(user_id).get()
-    if not docs.exists:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User no longer exists")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token",
+        )
 
-    new_token = create_access_token({"sub": user_id, "email": email})
+    user_doc = db.collection("users").document(user_id).get()
+    if not user_doc.exists:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists",
+        )
+
+    user = user_doc.to_dict()
+    user_role = _normalize_role(user.get("role"))
+
+    new_token = create_access_token({
+        "sub": user_id,
+        "email": email,
+        "role": user_role,
+    })
     new_refresh_token = create_refresh_token({"sub": user_id, "email": email})
 
     return {
         "token": new_token,
-        "refresh_token": new_refresh_token
+        "refresh_token": new_refresh_token,
     }

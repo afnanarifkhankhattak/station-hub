@@ -132,3 +132,34 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 
   return res;
 }
+
+
+// ─── Reviews API ────────────────────────────────────────
+export const reviewsApi = {
+  /**
+   * Submit a review for a completed booking.
+   * Returns the raw Response — callers parse JSON themselves.
+   */
+  create: (
+    bookingId: string,
+    rating: number,
+    comment: string = "",
+    tags: string[] = [],
+  ) =>
+    apiFetch(`/reviews/`, {
+      method: "POST",
+      body: JSON.stringify({
+        booking_id: bookingId,
+        rating,
+        comment,
+        tags,
+      }),
+    }),
+
+  /** Fetch reviews for a specific station (public). */
+  listForStation: (stationId: string) =>
+    apiFetch(`/reviews/station/${stationId}`),
+
+  /** Fetch the current user's own reviews. */
+  listMine: () => apiFetch(`/reviews/me`),
+};

@@ -1,0 +1,31 @@
+{
+  "generatedOnPlatform": "win32",
+  "projectType": "webapp",
+  "setup": [
+    {
+      "command": "npm",
+      "args": ["install", "--no-package-lock", "--legacy-peer-deps"]
+    }
+  ],
+  "assertions": [
+    {
+      "name": "tests-pass",
+      "kind": "process",
+      "command": "npm",
+      "args": ["test"],
+      "verificationMethod": "test-results",
+      "expected": "0",
+      "timeoutSeconds": 300
+    },
+    {
+      "name": "expo-web-serves-home",
+      "kind": "http-probe",
+      "startCommand": "npm",
+      "startArgs": ["run", "web", "--", "--port", "8089"],
+      "url": "http://localhost:8089/",
+      "verificationMethod": "http-status",
+      "expected": "200",
+      "timeoutSeconds": 180
+    }
+  ]
+}

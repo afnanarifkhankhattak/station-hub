@@ -1,7 +1,13 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
-console.log("API BASE URL:", import.meta.env.VITE_API_URL);
+// Station Hub Dashboard — API client
 
-const getToken = () => localStorage.getItem("token") || sessionStorage.getItem("token");
+const BASE_URL = import.meta.env.VITE_API_URL;
+
+if (import.meta.env.DEV) {
+  console.log("API BASE URL:", BASE_URL);
+}
+
+const getToken = () =>
+  localStorage.getItem("token") || sessionStorage.getItem("token");
 
 const request = async (method, endpoint, data) => {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
@@ -12,10 +18,21 @@ const request = async (method, endpoint, data) => {
     },
     body: data !== undefined ? JSON.stringify(data) : undefined,
   });
+
   const text = await res.text();
-  const parsed = text ? JSON.parse(text) : {};
-  if (!res.ok) throw new Error(parsed.detail || `Request failed: ${res.status}`);
-  return parsed;
+  let parsed = {};
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { detail: text.slice(0, 200) };
+    }
+  }
+
+  if (!res.ok) {
+    throw new Error(parsed.detail || `Request failed: ${res.status}`);
+  }
+  return parsed ?? {};
 };
 
 export const api = {
@@ -24,6 +41,7 @@ export const api = {
   put: (endpoint, data) => request("PUT", endpoint, data),
   delete: (endpoint) => request("DELETE", endpoint),
   patch: (endpoint, data) => request("PATCH", endpoint, data),
+
   auth: {
     register: (full_name, email, password, phone = "") =>
       api.post("/auth/register", { full_name, email, password, phone }),
@@ -35,5 +53,51 @@ export const api = {
     changePassword: (old_password, new_password) =>
       api.post("/auth/change-password", { old_password, new_password }),
     googleLogin: (id_token) => api.post("/auth/google", { id_token }),
+  },
+
+  admin: {
+    // ─── Platform stats ──────────────────────────────────
+    getStats: () => api.get("/admin/stats"),
+
+    // ─── Stations ────────────────────────────────────────
+    getStations: (params = {}) => {
+      const q = new URLSearchParams(
+        Object.entries(params).filter(
+          ([, v]) => v !== undefined && v !== null && v !== ""
+        )
+      ).toString();
+      return api.get(`/admin/stations${q ? `?${q}` : ""}`);
+    },
+
+    updateStationStatus: (stationId, status, reason = "") =>
+      api.patch(`/admin/stations/${stationId}/status`, { status, reason }),
+
+    // ─── Users ───────────────────────────────────────────
+    getUsers: (params = {}) => {
+      const q = new URLSearchParams(
+        Object.entries(params).filter(
+          ([, v]) => v !== undefined && v !== null && v !== ""
+        )
+      ).toString();
+      return api.get(`/admin/users${q ? `?${q}` : ""}`);
+    },
+
+    updateUserStatus: (userId, status, reason = "") =>
+      api.patch(`/admin/users/${userId}/status`, { status, reason }),
+
+    // ─── Reviews ─────────────────────────────────────────
+    reviews: {
+      list: (params = {}) => {
+        const q = new URLSearchParams(
+          Object.entries(params).filter(
+            ([, v]) => v !== undefined && v !== null && v !== ""
+          )
+        ).toString();
+        return api.get(`/reviews/admin/list${q ? `?${q}` : ""}`);
+      },
+
+      moderate: (reviewId, hidden, reason = "") =>
+        api.patch(`/reviews/admin/${reviewId}/moderate`, { hidden, reason }),
+    },
   },
 };

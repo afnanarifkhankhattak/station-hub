@@ -1,4 +1,6 @@
-import React, { createContext, useState, useEffect } from 'react';
+// frontend/src/context/AuthContext.jsx
+
+import { createContext, useState, useEffect } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 export const AuthContext = createContext(null);
@@ -16,18 +18,24 @@ export const AuthProvider = ({ children }) => {
       try {
         const decodedToken = jwtDecode(storedToken);
 
+        // Reject expired tokens immediately
+        if (decodedToken.exp && Date.now() >= decodedToken.exp * 1000) {
+          throw new Error('Token expired');
+        }
+
         const parsedUser = JSON.parse(storedUser);
 
+        // ✅ FIX: Trust the role from the signed JWT — not from localStorage.
+        // Also strip whitespace (Firestore sometimes stores trailing \n).
         const secureUser = {
           ...parsedUser,
-          role: decodedToken.role // Overwrite any manual changes made by the user
+          role: (decodedToken.role || 'user').trim(),
         };
 
         setUser(secureUser);
         setToken(storedToken);
       } catch (error) {
-        // If the token is corrupt or invalid, log them out
-        console.error("Invalid token found");
+        console.error('Invalid or expired token:', error.message);
         localStorage.removeItem('user');
         localStorage.removeItem('token');
         localStorage.removeItem('refresh_token');
@@ -38,28 +46,21 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-
-
-  // Handle successful login or registration
   const login = (authResponse) => {
     const { token, refresh_token, user } = authResponse;
 
-    // Save to local state
     setUser(user);
     setToken(token);
 
-    // Persist session tokens across browser tabs/refreshes
     localStorage.setItem('token', token);
     localStorage.setItem('refresh_token', refresh_token);
     localStorage.setItem('user', JSON.stringify(user));
-    localStorage.setItem('theme', 'dark'); // or 'dark'
+    localStorage.setItem('theme', 'dark');
   };
 
-  // Log user out and purge all local records
   const logout = () => {
     setUser(null);
     setToken(null);
-    setPageLoad(true);
     localStorage.removeItem('token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');

@@ -298,10 +298,26 @@ def get_dashboard_stats(user_id: str) -> dict:
     return result
 
 
-def update_booking_status(booking_id: str, status: str) -> dict:
+def update_booking_status(
+    booking_id: str,
+    status: str,
+    user_id: str,
+    user_role: str = "user",
+) -> dict:
+    """
+    Update a booking's status.
+
+    Authorization:
+      - Super admins can update any booking.
+      - Station owners can only update bookings at their own stations.
+      - Customers are denied.
+    """
     allowed = {"confirmed", "rejected", "completed", "cancelled"}
     if status not in allowed:
-        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {allowed}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {allowed}",
+        )
 
     doc_ref = db.collection("bookings").document(booking_id)
     doc = doc_ref.get()
@@ -311,20 +327,46 @@ def update_booking_status(booking_id: str, status: str) -> dict:
 
     booking = doc.to_dict()
     previous_status = booking.get("status")
+
+    # ✅ OWNERSHIP CHECK
+    if user_role != "admin":
+        station_id = booking.get("station_id")
+        if not station_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Booking has no station associated",
+            )
+
+        station_doc = db.collection("stations").document(station_id).get()
+        if not station_doc.exists:
+            raise HTTPException(status_code=404, detail="Station not found")
+
+        station_owner_id = (station_doc.to_dict() or {}).get("owner_id")
+        if station_owner_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You do not have permission to update this booking",
+            )
+
+    # Idempotent — no-op if status unchanged
     if previous_status == status:
-        return {"message": f"Booking is already {status}", "booking_id": booking_id}
+        return {
+            "message": f"Booking is already {status}",
+            "booking_id": booking_id,
+        }
 
     doc_ref.update({"status": status})
     event = booking_events.publish(booking.get("user_id", ""), booking_id, status)
-    # Bust short dashboard TTL for any cached owners (cheap full clear).
+
+    # Bust dashboard cache (all owners, cheap)
     with _dash_lock:
         _dash_cache.clear()
 
     # Send push notification to customer
     try:
-        user_id = booking.get("user_id")
-        if user_id:
-            user_doc = db.collection("users").document(user_id).get()
+        customer_id = booking.get("user_id")
+        if customer_id:
+            user_doc = db.collection("users").document(customer_id).get()
             if user_doc.exists:
                 push_token = user_doc.to_dict().get("push_token")
                 if push_token:
@@ -347,9 +389,13 @@ def update_booking_status(booking_id: str, status: str) -> dict:
                                 "new_status": status,
                                 "timestamp": event["timestamp"],
                             },
-                        }
+                        },
                     )
     except Exception as e:
         print(f"Push notification error: {e}")
 
-    return {"message": f"Booking marked as {status}", "booking_id": booking_id, "event": event}
+    return {
+        "message": f"Booking marked as {status}",
+        "booking_id": booking_id,
+        "event": event,
+    }
